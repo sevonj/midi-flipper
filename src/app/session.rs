@@ -67,13 +67,13 @@ impl Session {
             let note = match msg {
                 midi_msg::ChannelVoiceMsg::NoteOn { note, .. } => note,
                 midi_msg::ChannelVoiceMsg::NoteOff { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::HighResNoteOn { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::HighResNoteOff { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::PolyPressure { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::PitchBend { bend } => {
-                    // TODO: flip bend
-                    continue;
-                }
+                // midi_msg::ChannelVoiceMsg::HighResNoteOn { note, .. } => note,
+                // midi_msg::ChannelVoiceMsg::HighResNoteOff { note, .. } => note,
+                // midi_msg::ChannelVoiceMsg::PolyPressure { note, .. } => note,
+                // midi_msg::ChannelVoiceMsg::PitchBend { bend } => {
+                //    // TODO: flip bend
+                //    continue;
+                //}
                 _ => continue,
             };
 

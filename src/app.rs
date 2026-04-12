@@ -1,23 +1,22 @@
 mod panels;
 mod session;
 mod toast;
-mod util;
 mod widgets;
 
-use std::fmt::format;
 use std::path::PathBuf;
 
 use eframe::App;
 use eframe::CreationContext;
-use egui::CentralPanel;
 use egui::Ui;
 use egui_toast::Toasts;
+use rfd::FileDialog;
 
 use crate::app::session::Session;
 use crate::app::widgets::SessionView;
 
 #[derive(Default)]
 pub struct MidiFlipperApp {
+    workdir: Option<PathBuf>,
     session: Option<Session>,
     toasts: Toasts,
 }
@@ -31,6 +30,8 @@ impl MidiFlipperApp {
     }
 
     pub fn try_open_file(&mut self, file_path: PathBuf) {
+        self.workdir = file_path.parent().map(|p| p.to_path_buf());
+
         let session = match Session::from_file(file_path) {
             Ok(session) => session,
             Err(e) => {
@@ -55,8 +56,8 @@ impl MidiFlipperApp {
             .and_then(|s| s.to_str())
             .unwrap_or_default();
         let file_name = PathBuf::from(format!("{stem}_flip")).with_extension("mid");
-        
-        let Some(file_path) = util::save_midi_file(file_name.to_str().unwrap_or_default()) else {
+
+        let Some(file_path) = self.save_midi_file(file_name.to_str().unwrap_or_default()) else {
             return;
         };
 
@@ -69,6 +70,24 @@ impl MidiFlipperApp {
 
     pub fn close_session(&mut self) {
         self.session = None;
+    }
+
+    fn pick_midi_file(&self) -> Option<PathBuf> {
+        let mut dialog = FileDialog::new().add_filter("MIDI Files", &["mid", "midi"]);
+        if let Some(dir) = &self.workdir {
+            dialog = dialog.set_directory(dir);
+        }
+        dialog.pick_file()
+    }
+
+    fn save_midi_file(&self, file_name: &str) -> Option<PathBuf> {
+        let mut dialog = FileDialog::new()
+            .add_filter("MIDI Files", &["mid"])
+            .set_file_name(file_name);
+        if let Some(dir) = &self.workdir {
+            dialog = dialog.set_directory(dir);
+        }
+        dialog.save_file()
     }
 }
 

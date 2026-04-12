@@ -3,7 +3,6 @@ use egui::Panel;
 use egui::Ui;
 
 use crate::MidiFlipperApp;
-use crate::app::util;
 
 impl MidiFlipperApp {
     pub(crate) fn top_panel(&mut self, ui: &mut Ui) -> egui::Response {
@@ -12,7 +11,7 @@ impl MidiFlipperApp {
                 MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
                         if ui.button("Open").clicked() {
-                            if let Some(file_path) = util::pick_midi_file() {
+                            if let Some(file_path) = self.pick_midi_file() {
                                 self.try_open_file(file_path);
                             }
                         }
