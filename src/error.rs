@@ -23,8 +23,8 @@ impl std::fmt::Display for MidiFlipperError {
         use MidiFlipperError::*;
 
         match self {
-            Io(source) => source.fmt(f),
-            MidiParse(source) => source.fmt(f),
+            Io(_) => write!(f, "IO Error"),
+            MidiParse(_) => write!(f, "Couldn't parse MIDI file"),
         }
     }
 }
