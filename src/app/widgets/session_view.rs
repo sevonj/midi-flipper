@@ -40,7 +40,7 @@ impl Widget for SessionView<'_> {
                                 });
                             });
 
-                        tablebuilder.body(|mut body| {
+                        tablebuilder.body(|body| {
                             body.rows(30.0, self.session.tracks().len(), |mut row| {
                                 let idx = row.index();
                                 let track = &mut self.session.tracks_mut()[idx];
