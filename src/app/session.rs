@@ -42,14 +42,20 @@ impl Session {
         self.flipped_midi.as_deref()
     }
 
-    pub fn flip(&mut self) {
+    pub fn flip(&mut self) -> Result<(), MidiFlipperError> {
         let mut clone = self.midi_file.clone();
 
         for track in &mut clone.tracks {
             self.flip_track(track);
         }
 
+        let validate = MidiFile::from_midi(&clone.to_midi());
+        if validate.is_err() {
+            return Err(MidiFlipperError::OutputValidationFailed);
+        }
+
         self.flipped_midi = Some(clone);
+        Ok(())
     }
 
     fn flip_track(&self, track: &mut midi_msg::Track) {
@@ -67,9 +73,9 @@ impl Session {
             let note = match msg {
                 midi_msg::ChannelVoiceMsg::NoteOn { note, .. } => note,
                 midi_msg::ChannelVoiceMsg::NoteOff { note, .. } => note,
-                // midi_msg::ChannelVoiceMsg::HighResNoteOn { note, .. } => note,
-                // midi_msg::ChannelVoiceMsg::HighResNoteOff { note, .. } => note,
-                // midi_msg::ChannelVoiceMsg::PolyPressure { note, .. } => note,
+                midi_msg::ChannelVoiceMsg::HighResNoteOn { note, .. } => note,
+                midi_msg::ChannelVoiceMsg::HighResNoteOff { note, .. } => note,
+                midi_msg::ChannelVoiceMsg::PolyPressure { note, .. } => note,
                 // midi_msg::ChannelVoiceMsg::PitchBend { bend } => {
                 //    // TODO: flip bend
                 //    continue;
@@ -78,7 +84,6 @@ impl Session {
             };
 
             let mut mapped = FLIP_ORIGIN + (FLIP_ORIGIN - *note as i32);
-            print!("{mapped}-");
 
             while mapped > 127 {
                 mapped -= 12;
@@ -86,9 +91,6 @@ impl Session {
             while mapped < 0 {
                 mapped += 12;
             }
-            println!("{mapped}");
-
-            *note = mapped as u8;
         }
     }
 }

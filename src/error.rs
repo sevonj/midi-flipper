@@ -4,6 +4,7 @@ use std::error::Error;
 pub enum MidiFlipperError {
     Io(std::io::Error),
     MidiParse(midi_msg::MidiFileParseError),
+    OutputValidationFailed
 }
 
 impl From<std::io::Error> for MidiFlipperError {
@@ -25,6 +26,7 @@ impl std::fmt::Display for MidiFlipperError {
         match self {
             Io(_) => write!(f, "IO Error"),
             MidiParse(_) => write!(f, "Couldn't parse MIDI file"),
+            OutputValidationFailed => write!(f, "Output validation failed"),
         }
     }
 }

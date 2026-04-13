@@ -27,7 +27,9 @@ impl Widget for SessionView<'_> {
                     }
 
                     if ui.button("Flip").clicked() {
-                        self.session.flip();
+                        if let Err(_e) = self.session.flip() {
+                            //
+                        };
                     }
 
                     if self.session.flipped_midi().is_none() {
