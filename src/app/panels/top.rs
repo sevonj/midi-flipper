@@ -10,10 +10,10 @@ impl MidiFlipperApp {
             .show_inside(ui, |ui| {
                 MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
-                        if ui.button("Open").clicked() {
-                            if let Some(file_path) = self.pick_midi_file() {
-                                self.try_open_file(file_path);
-                            }
+                        if ui.button("Open").clicked()
+                            && let Some(file_path) = self.pick_midi_file()
+                        {
+                            self.try_open_file(file_path);
                         }
                         if ui.button("Export").clicked() {
                             self.export_midi();

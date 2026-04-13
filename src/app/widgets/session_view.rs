@@ -60,11 +60,11 @@ impl Widget for SessionView<'_> {
                             ui.label("is flipped");
                         }
 
-                        if ui.button("Flip").clicked() {
-                            if let Err(_e) = self.session.flip() {
-                                //
-                            };
-                        }
+                        if ui.button("Flip").clicked()
+                            && let Err(_e) = self.session.flip()
+                        {
+                            //
+                        };
 
                         if self.session.flipped_midi().is_none() {
                             ui.disable();

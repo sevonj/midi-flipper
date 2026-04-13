@@ -119,7 +119,7 @@ impl MidiFlipperApp {
     }
 
     pub fn close_session(&mut self) {
-        self.log_text(format!("Closing session"));
+        self.log_text("Closing session".to_string());
         self.session = None;
     }
 
