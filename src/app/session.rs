@@ -91,6 +91,8 @@ impl Session {
             while mapped < 0 {
                 mapped += 12;
             }
+
+            *note = mapped as u8;
         }
     }
 }
