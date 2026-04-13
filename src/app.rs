@@ -4,11 +4,17 @@ mod widgets;
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::time::Duration;
+use std::time::Instant;
 
 use eframe::App;
 use eframe::CreationContext;
+use egui::Image;
+use egui::Layout;
 use egui::Ui;
+use egui::Vec2;
 use egui::WidgetText;
+use egui_extras::install_image_loaders;
 use egui_toast::Toast;
 use egui_toast::ToastKind;
 use egui_toast::ToastOptions;
@@ -36,13 +42,26 @@ impl std::fmt::Display for AppTab {
     }
 }
 
-#[derive(Default)]
 pub struct MidiFlipperApp {
     workdir: Option<PathBuf>,
     session: Option<Session>,
     toasts: Toasts,
     log: VecDeque<String>,
     tab: AppTab,
+    start: Instant,
+}
+
+impl Default for MidiFlipperApp {
+    fn default() -> Self {
+        Self {
+            workdir: Default::default(),
+            session: Default::default(),
+            toasts: Default::default(),
+            log: Default::default(),
+            tab: Default::default(),
+            start: Instant::now(),
+        }
+    }
 }
 
 impl MidiFlipperApp {
@@ -184,6 +203,27 @@ impl MidiFlipperApp {
 
 impl App for MidiFlipperApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
+        install_image_loaders(ui.ctx());
+
+        if Instant::now() - self.start < Duration::from_secs(3) {
+            const SPLASH_SIZE: Vec2 = Vec2 { x: 400.0, y: 300.0 };
+            ui.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
+            ui.send_viewport_cmd(egui::ViewportCommand::Resizable(false));
+            ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(SPLASH_SIZE));
+            Image::from(egui::include_image!("../assets/bootsplash.png"))
+                .paint_at(ui, ui.content_rect());
+            ui.with_layout(Layout::bottom_up(egui::Align::Max), |ui| {
+                ui.monospace(format!(
+                    "2026 — MAXIMUM MIDI TWISTER 360 {}",
+                    env!("CARGO_PKG_VERSION")
+                ));
+            });
+            return;
+        }
+        ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
+        ui.send_viewport_cmd(egui::ViewportCommand::Resizable(true));
+        ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
+
         self.top_panel(ui);
         self.bottom_panel(ui);
 
