@@ -7,17 +7,74 @@ use crate::MidiFlipperError;
 #[derive(Debug)]
 pub(crate) struct Session {
     name: String,
-    midi_file: Box<MidiFile>,
+    midi_header: midi_msg::Header,
+    tracks: Vec<SessionTrack>,
     flipped_midi: Option<Box<MidiFile>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct SessionTrack {
+    name: Option<String>,
+    track: midi_msg::Track,
+    flip: bool,
+}
+
+impl SessionTrack {
+    pub fn from_track(track: midi_msg::Track) -> Self {
+        let name = Self::find_name(&track);
+        Self {
+            name,
+            track,
+            flip: true,
+        }
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
+    pub fn flip(&self) -> bool {
+        self.flip
+    }
+
+    pub fn flip_mut(&mut self) -> &mut bool {
+        &mut self.flip
+    }
+
+    pub fn is_midi(&self) -> bool {
+        matches!(self.track, midi_msg::Track::Midi(_))
+    }
+
+    fn find_name(track: &midi_msg::Track) -> Option<String> {
+        let midi_msg::Track::Midi(events) = track else {
+            return None;
+        };
+
+        for track_event in events {
+            let midi_msg::MidiMsg::Meta { msg } = &track_event.event else {
+                continue;
+            };
+            let midi_msg::Meta::TrackName(name) = msg else {
+                continue;
+            };
+            return Some(name.to_owned());
+        }
+        None
+    }
 }
 
 const FLIP_ORIGIN: i32 = 60; // 60 is C4
 
 impl Session {
     pub fn new(name: String, midi_file: MidiFile) -> Self {
+        let mut midi_tracks = Vec::with_capacity(midi_file.tracks.len());
+        for track in midi_file.tracks {
+            midi_tracks.push(SessionTrack::from_track(track));
+        }
         Self {
             name,
-            midi_file: Box::new(midi_file),
+            midi_header: midi_file.header,
+            tracks: midi_tracks,
             flipped_midi: None,
         }
     }
@@ -38,23 +95,40 @@ impl Session {
         &self.name
     }
 
+    pub fn tracks(&self) -> &[SessionTrack] {
+        &self.tracks
+    }
+
+    pub fn tracks_mut(&mut self) -> &mut [SessionTrack] {
+        &mut self.tracks
+    }
+
     pub fn flipped_midi(&self) -> Option<&MidiFile> {
         self.flipped_midi.as_deref()
     }
 
     pub fn flip(&mut self) -> Result<(), MidiFlipperError> {
-        let mut clone = self.midi_file.clone();
-
-        for track in &mut clone.tracks {
-            self.flip_track(track);
+        let mut midi_tracks = Vec::with_capacity(self.tracks.len());
+        for session_track in &self.tracks {
+            let mut track = session_track.track.clone();
+            if session_track.flip() {
+                self.flip_track(&mut track);
+            }
+            midi_tracks.push(track);
         }
 
-        let validate = MidiFile::from_midi(&clone.to_midi());
+        let flipped = MidiFile {
+            header: self.midi_header.clone(),
+            tracks: midi_tracks,
+        };
+
+        let validate = MidiFile::from_midi(&flipped.to_midi());
         if validate.is_err() {
             return Err(MidiFlipperError::OutputValidationFailed);
         }
 
-        self.flipped_midi = Some(clone);
+        self.flipped_midi = Some(Box::new(flipped));
+
         Ok(())
     }
 
