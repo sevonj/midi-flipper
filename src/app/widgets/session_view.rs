@@ -32,10 +32,14 @@ impl Widget for SessionView<'_> {
                         let tablebuilder = TableBuilder::new(ui)
                             .striped(true)
                             .column(Column::auto())
+                            .column(Column::auto())
                             .column(Column::remainder())
                             .header(16.0, |mut header| {
                                 header.col(|ui| {
-                                    ui.strong("No.");
+                                    ui.strong("Flip");
+                                });
+                                header.col(|ui| {
+                                    ui.strong("Track No.");
                                 });
                                 header.col(|ui| {
                                     ui.strong("Name");
@@ -47,8 +51,10 @@ impl Widget for SessionView<'_> {
                                 let idx = row.index();
                                 let track = &mut self.session.tracks_mut()[idx];
                                 row.col(|ui| {
-                                    ui.checkbox(track.flip_mut(), format!("Track {idx}"))
-                                        .on_hover_text("Flip me?");
+                                    ui.checkbox(track.flip_mut(), "").on_hover_text("Flip me?");
+                                });
+                                row.col(|ui| {
+                                    ui.label(format!("Track {idx}"));
                                 });
                                 row.col(|ui| {
                                     track_name_label(ui, track);
