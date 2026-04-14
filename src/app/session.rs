@@ -5,14 +5,7 @@ use midi_msg::MidiFile;
 
 use crate::MidiFlipperError;
 
-#[derive(Debug)]
-pub(crate) struct Session {
-    name: String,
-    midi_header: midi_msg::Header,
-    tracks: Vec<SessionTrack>,
-    flipped_midi: Option<Box<MidiFile>>,
-    ignore_ch10: bool,
-}
+const MIDDLE_C: u8 = 60; // 60 is C4
 
 #[derive(Debug)]
 pub(crate) struct SessionTrack {
@@ -65,7 +58,15 @@ impl SessionTrack {
     }
 }
 
-const FLIP_ORIGIN: i32 = 60; // 60 is C4
+#[derive(Debug)]
+pub(crate) struct Session {
+    name: String,
+    midi_header: midi_msg::Header,
+    tracks: Vec<SessionTrack>,
+    flipped_midi: Option<Box<MidiFile>>,
+    ignore_ch10: bool,
+    flip_center: u8,
+}
 
 impl Session {
     pub fn new(name: String, midi_file: MidiFile) -> Self {
@@ -79,6 +80,7 @@ impl Session {
             tracks: midi_tracks,
             flipped_midi: None,
             ignore_ch10: true,
+            flip_center: MIDDLE_C,
         }
     }
 
@@ -111,11 +113,19 @@ impl Session {
     }
 
     pub fn ignore_ch10(&self) -> bool {
-        self.ignore_ch10()
+        self.ignore_ch10
     }
 
     pub fn ignore_ch10_mut(&mut self) -> &mut bool {
         &mut self.ignore_ch10
+    }
+
+    pub fn flip_center(&self) -> u8 {
+        self.flip_center
+    }
+
+    pub fn flip_center_mut(&mut self) -> &mut u8 {
+        &mut self.flip_center
     }
 
     pub fn flip(&mut self) -> Result<(), MidiFlipperError> {
@@ -172,7 +182,8 @@ impl Session {
                 _ => continue,
             };
 
-            let mut mapped = FLIP_ORIGIN + (FLIP_ORIGIN - *note as i32);
+            let flip_center = self.flip_center as i32;
+            let mut mapped = flip_center + (flip_center - *note as i32);
 
             while mapped > 127 {
                 mapped -= 12;
