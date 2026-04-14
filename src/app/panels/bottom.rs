@@ -11,8 +11,13 @@ impl MidiFlipperApp {
                 ui.horizontal(|ui| {
                     ui.selectable_value(
                         &mut self.tab,
-                        crate::app::AppTab::Main,
-                        AppTab::Main.to_string(),
+                        crate::app::AppTab::Session,
+                        AppTab::Session.to_string(),
+                    );
+                    ui.selectable_value(
+                        &mut self.tab,
+                        crate::app::AppTab::Tracks,
+                        AppTab::Tracks.to_string(),
                     );
                     ui.selectable_value(
                         &mut self.tab,

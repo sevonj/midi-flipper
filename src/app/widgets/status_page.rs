@@ -10,6 +10,10 @@ impl<'a> StatusPage<'a> {
     pub fn new(title: &'a str, subtitle: &'a str) -> Self {
         Self { title, subtitle }
     }
+
+    pub fn status_nothing_open() -> Self {
+        Self::new("Nothing Open", "Open a midi file from the file menu.")
+    }
 }
 
 impl Widget for StatusPage<'_> {
