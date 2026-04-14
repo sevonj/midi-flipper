@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use midi_msg::Channel;
 use midi_msg::MidiFile;
 
 use crate::MidiFlipperError;
@@ -10,6 +11,7 @@ pub(crate) struct Session {
     midi_header: midi_msg::Header,
     tracks: Vec<SessionTrack>,
     flipped_midi: Option<Box<MidiFile>>,
+    ignore_ch10: bool,
 }
 
 #[derive(Debug)]
@@ -76,6 +78,7 @@ impl Session {
             midi_header: midi_file.header,
             tracks: midi_tracks,
             flipped_midi: None,
+            ignore_ch10: true,
         }
     }
 
@@ -105,6 +108,14 @@ impl Session {
 
     pub fn flipped_midi(&self) -> Option<&MidiFile> {
         self.flipped_midi.as_deref()
+    }
+
+    pub fn ignore_ch10(&self) -> bool {
+        self.ignore_ch10()
+    }
+
+    pub fn ignore_ch10_mut(&mut self) -> &mut bool {
+        &mut self.ignore_ch10
     }
 
     pub fn flip(&mut self) -> Result<(), MidiFlipperError> {
@@ -138,11 +149,15 @@ impl Session {
         };
 
         for track_event in track_events {
-            let msg = match &mut track_event.event {
-                midi_msg::MidiMsg::ChannelVoice { msg, .. } => msg,
-                midi_msg::MidiMsg::RunningChannelVoice { msg, .. } => msg,
+            let (channel, msg) = match &mut track_event.event {
+                midi_msg::MidiMsg::ChannelVoice { channel, msg, .. } => (channel, msg),
+                midi_msg::MidiMsg::RunningChannelVoice { channel, msg } => (channel, msg),
                 _ => continue,
             };
+
+            if self.ignore_ch10 && *channel == Channel::Ch10 {
+                continue;
+            }
 
             let note = match msg {
                 midi_msg::ChannelVoiceMsg::NoteOn { note, .. } => note,

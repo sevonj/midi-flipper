@@ -26,6 +26,8 @@ impl Widget for SessionView<'_> {
                     ui.vertical(|ui| {
                         ui.label(self.session.name());
 
+                        ui.checkbox(self.session.ignore_ch10_mut(), "Skip Ch. 10 events (drums)");
+
                         ui.heading("Tracks");
                         let tablebuilder = TableBuilder::new(ui)
                             .striped(true)
