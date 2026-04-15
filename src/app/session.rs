@@ -128,6 +128,10 @@ impl Session {
         &mut self.flip_center
     }
 
+    pub fn reset_flip_center(&mut self) {
+        self.flip_center = MIDDLE_C;
+    }
+
     pub fn flip(&mut self) -> Result<(), MidiFlipperError> {
         let mut midi_tracks = Vec::with_capacity(self.tracks.len());
         for session_track in &self.tracks {

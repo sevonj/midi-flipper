@@ -25,10 +25,16 @@ impl Widget for SessionView<'_> {
                     ui.vertical(|ui| {
                         ui.label(self.session.name());
 
-                        ui.add(
-                            Slider::new(self.session.flip_center_mut(), 21..=127)
-                                .custom_formatter(|v, _| util::note_name(v as u8).to_string()),
-                        );
+                        ui.horizontal(|ui| {
+                            ui.add(
+                                Slider::new(self.session.flip_center_mut(), 21..=127)
+                                    .custom_formatter(|v, _| util::note_name(v as u8).to_string()),
+                            );
+                            if ui.button("Reset").clicked() {
+                                self.session.reset_flip_center();
+                            }
+                        });
+
                         ui.checkbox(self.session.ignore_ch10_mut(), "Skip Ch. 10 events (drums)");
 
                         if self.session.flipped_midi().is_none() {
