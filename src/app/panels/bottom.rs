@@ -3,26 +3,33 @@ use egui::Ui;
 
 use crate::MidiFlipperApp;
 use crate::app::AppTab;
+use crate::app::widgets::Tab;
 
 impl MidiFlipperApp {
-    pub(crate) fn bottom_panel(&mut self, ui: &mut Ui) -> egui::Response {
-        Panel::bottom("bottom_panel")
+    pub(crate) fn tabs_panel(&mut self, ui: &mut Ui) -> egui::Response {
+        Panel::top("tabs_panel")
             .show_inside(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.selectable_value(
+                    Tab::value(
+                        ui,
                         &mut self.tab,
-                        crate::app::AppTab::Session,
-                        AppTab::Session.to_string(),
+                        AppTab::Session,
+                        &AppTab::Session.to_string(),
+                        "tab_session",
                     );
-                    ui.selectable_value(
+                    Tab::value(
+                        ui,
                         &mut self.tab,
-                        crate::app::AppTab::Tracks,
-                        AppTab::Tracks.to_string(),
+                        AppTab::Tracks,
+                        &AppTab::Tracks.to_string(),
+                        "tab_tracks",
                     );
-                    ui.selectable_value(
+                    Tab::value(
+                        ui,
                         &mut self.tab,
-                        crate::app::AppTab::Log,
-                        AppTab::Log.to_string(),
+                        AppTab::Log,
+                        &AppTab::Log.to_string(),
+                        "tab_log",
                     );
                 });
             })

@@ -95,6 +95,17 @@ impl MidiFlipperApp {
         self.session = Some(session);
     }
 
+    pub fn is_session_open(&self) -> bool {
+        self.session.is_some()
+    }
+
+    pub fn can_save(&self) -> bool {
+        let Some(session) = &self.session else {
+            return false;
+        };
+        session.flipped_midi().is_some()
+    }
+
     pub fn prompt_save_file(&mut self) {
         let Some(session) = &self.session else {
             return;
@@ -127,6 +138,9 @@ impl MidiFlipperApp {
     }
 
     pub fn close_session(&mut self) {
+        if !self.is_session_open() {
+            return;
+        }
         self.log_text("Closing session".to_string());
         self.session = None;
     }
@@ -237,8 +251,8 @@ impl App for MidiFlipperApp {
         ui.send_viewport_cmd(egui::ViewportCommand::Resizable(true));
         ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
 
-        self.top_panel(ui);
-        self.bottom_panel(ui);
+        self.menu_bar_panel(ui);
+        self.tabs_panel(ui);
 
         match self.tab {
             AppTab::Session => self.tab_session(ui),

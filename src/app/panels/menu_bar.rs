@@ -1,17 +1,26 @@
 use egui::Button;
+use egui::Frame;
 use egui::MenuBar;
 use egui::Panel;
 use egui::Ui;
+use egui::vec2;
 
 use crate::MidiFlipperApp;
 use crate::app::shortcuts::SHORTCUT_FILE_CLOSE;
-use crate::app::shortcuts::SHORTCUT_FILE_SAVE;
 use crate::app::shortcuts::SHORTCUT_FILE_OPEN;
+use crate::app::shortcuts::SHORTCUT_FILE_SAVE;
 use crate::app::shortcuts::SHORTCUT_QUIT;
 
 impl MidiFlipperApp {
-    pub(crate) fn top_panel(&mut self, ui: &mut Ui) -> egui::Response {
-        Panel::top("top_panel")
+    pub(crate) fn menu_bar_panel(&mut self, ui: &mut Ui) -> egui::Response {
+        Panel::top("menu_bar_panel")
+            .resizable(false)
+            .show_separator_line(false)
+            .frame(
+                Frame::default()
+                    .inner_margin(vec2(8., 2.))
+                    .fill(ui.ctx().global_style().visuals.widgets.open.weak_bg_fill),
+            )
             .show_inside(ui, |ui| {
                 MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
@@ -26,7 +35,8 @@ impl MidiFlipperApp {
                         }
 
                         if ui
-                            .add(
+                            .add_enabled(
+                                self.can_save(),
                                 Button::new("Save")
                                     .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_FILE_SAVE)),
                             )
@@ -36,7 +46,8 @@ impl MidiFlipperApp {
                         }
 
                         if ui
-                            .add(
+                            .add_enabled(
+                                self.is_session_open(),
                                 Button::new("Close")
                                     .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_FILE_CLOSE)),
                             )
