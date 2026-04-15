@@ -1,5 +1,6 @@
 mod panels;
 mod session;
+mod shortcuts;
 mod widgets;
 
 use std::collections::VecDeque;
@@ -75,7 +76,11 @@ impl MidiFlipperApp {
         Default::default()
     }
 
-    pub fn try_open_file(&mut self, file_path: PathBuf) {
+    pub fn prompt_open_file(&mut self) {
+        let Some(file_path) = self.pick_midi_file() else {
+            return;
+        };
+
         self.log_text(format!("Opening {file_path:?}"));
         self.workdir = file_path.parent().map(|p| p.to_path_buf());
 
@@ -241,6 +246,7 @@ impl App for MidiFlipperApp {
             AppTab::Log => self.tab_log(ui),
         }
 
+        self.consume_shortcuts(ui);
         self.toasts.show(ui);
     }
 }
