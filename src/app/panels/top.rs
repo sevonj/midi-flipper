@@ -5,7 +5,7 @@ use egui::Ui;
 
 use crate::MidiFlipperApp;
 use crate::app::shortcuts::SHORTCUT_FILE_CLOSE;
-use crate::app::shortcuts::SHORTCUT_FILE_EXPORT;
+use crate::app::shortcuts::SHORTCUT_FILE_SAVE;
 use crate::app::shortcuts::SHORTCUT_FILE_OPEN;
 use crate::app::shortcuts::SHORTCUT_QUIT;
 
@@ -27,12 +27,12 @@ impl MidiFlipperApp {
 
                         if ui
                             .add(
-                                Button::new("Export")
-                                    .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_FILE_EXPORT)),
+                                Button::new("Save")
+                                    .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_FILE_SAVE)),
                             )
                             .clicked()
                         {
-                            self.export_midi();
+                            self.prompt_save_file();
                         }
 
                         if ui

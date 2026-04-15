@@ -95,7 +95,7 @@ impl MidiFlipperApp {
         self.session = Some(session);
     }
 
-    pub fn export_midi(&mut self) {
+    pub fn prompt_save_file(&mut self) {
         let Some(session) = &self.session else {
             return;
         };
@@ -114,7 +114,7 @@ impl MidiFlipperApp {
         };
         let bytes = flipped_midi.to_midi();
 
-        self.log_text(format!("Exporting into {file_path:?}"));
+        self.log_text(format!("Saving into {file_path:?}"));
 
         match std::fs::write(file_path, bytes) {
             Ok(_) => self.toast_success("Saved!"),

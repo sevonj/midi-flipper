@@ -8,7 +8,7 @@ use crate::MidiFlipperApp;
 const COMMAND: Modifiers = Modifiers::COMMAND;
 
 pub const SHORTCUT_FILE_OPEN: SCut = SCut::new(COMMAND, Key::O);
-pub const SHORTCUT_FILE_EXPORT: SCut = SCut::new(COMMAND, Key::E);
+pub const SHORTCUT_FILE_SAVE: SCut = SCut::new(COMMAND, Key::S);
 pub const SHORTCUT_FILE_CLOSE: SCut = SCut::new(COMMAND, Key::W);
 pub const SHORTCUT_QUIT: SCut = SCut::new(COMMAND, Key::Q);
 
@@ -18,8 +18,8 @@ impl MidiFlipperApp {
             self.prompt_open_file();
         }
 
-        if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_FILE_EXPORT)) {
-            self.export_midi();
+        if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_FILE_SAVE)) {
+            self.prompt_save_file();
         }
 
         if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_FILE_CLOSE)) {
