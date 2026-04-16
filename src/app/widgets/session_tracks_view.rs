@@ -22,7 +22,25 @@ impl<'a> SessionTracksView<'a> {
 
 impl Widget for SessionTracksView<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        CentralPanel::default()
+        let length = self.session.length();
+
+        let state_id = ui.id().with("zoom");
+        const DEFAULT_ZOOM: f32 = 1.0;
+        let (mut zoom, mut offset) = ui.data_mut(|d| {
+            d.get_temp::<(f32, f32)>(state_id)
+                .unwrap_or((DEFAULT_ZOOM, 0.0))
+        });
+
+        ui.horizontal(|ui| {
+            if ui.button("Reset Zoom").clicked() {
+                zoom = DEFAULT_ZOOM;
+            }
+            if ui.button("Reset Position").clicked() {
+                offset = 0.0;
+            }
+        });
+
+        let response = CentralPanel::default()
             .show_inside(ui, |ui| {
                 ui.label(self.session.name());
 
@@ -45,11 +63,17 @@ impl Widget for SessionTracksView<'_> {
                         });
                         row.col(|ui| {
                             ui.style_mut().spacing.item_spacing = item_spacing;
-                            ui.add(TrackPreview::new(index, track));
+                            ui.set_width(length * zoom);
+                            ui.add(TrackPreview::new(index, track, &mut zoom, &mut offset));
+                            offset = offset.clamp(0.0, length);
                         });
                     });
                 });
             })
-            .response
+            .response;
+
+        ui.data_mut(|d| d.insert_temp(state_id, (zoom, offset)));
+
+        response
     }
 }

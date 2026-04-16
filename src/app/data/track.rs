@@ -7,21 +7,29 @@ use crate::app::data::PaintableNote;
 #[derive(Debug)]
 pub struct SessionTrack {
     name: Option<String>,
+    length: f32,
     track_original: midi_msg::Track,
     flip_enabled: bool,
-
     paint_cache_og: Vec<PaintableNote>,
 }
 
 impl SessionTrack {
     pub fn from_track(track: midi_msg::Track) -> Self {
         let name = Self::find_name(&track);
+        let length = if let midi_msg::Track::Midi(track_events) = &track
+            && let Some(last) = track_events.last()
+        {
+            last.beat_or_frame
+        } else {
+            0.0
+        };
 
         let mut paint_cache_og = vec![];
         regenerate_paint_cache(&mut paint_cache_og, &track);
 
         Self {
             name,
+            length,
             track_original: track,
             flip_enabled: true,
             paint_cache_og,
@@ -30,6 +38,10 @@ impl SessionTrack {
 
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
+    }
+
+    pub fn length(&self) -> f32 {
+        self.length
     }
 
     pub fn track(&self) -> &midi_msg::Track {
@@ -56,7 +68,7 @@ impl SessionTrack {
         let midi_msg::Track::Midi(track_events) = &self.track_original else {
             return None;
         };
-        Some(&track_events)
+        Some(track_events)
     }
 
     fn find_name(track: &midi_msg::Track) -> Option<String> {

@@ -11,6 +11,7 @@ const MIDDLE_C: u8 = 60; // 60 is C4
 #[derive(Debug)]
 pub struct Session {
     name: String,
+    length: f32,
     midi_header: midi_msg::Header,
     tracks: Vec<SessionTrack>,
     flipped_midi: Option<Box<MidiFile>>,
@@ -20,14 +21,21 @@ pub struct Session {
 
 impl Session {
     pub fn new(name: String, midi_file: MidiFile) -> Self {
-        let mut midi_tracks = Vec::with_capacity(midi_file.tracks.len());
+        let mut tracks = Vec::with_capacity(midi_file.tracks.len());
+        let mut length = 0.0;
         for track in midi_file.tracks {
-            midi_tracks.push(SessionTrack::from_track(track));
+            let session_track = SessionTrack::from_track(track);
+            if session_track.length() > length {
+                length = session_track.length();
+            }
+            tracks.push(session_track);
         }
+
         Self {
             name,
             midi_header: midi_file.header,
-            tracks: midi_tracks,
+            length,
+            tracks,
             flipped_midi: None,
             ignore_ch10: true,
             flip_center: MIDDLE_C,
@@ -48,6 +56,10 @@ impl Session {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn length(&self) -> f32 {
+        self.length
     }
 
     pub fn tracks(&self) -> &[SessionTrack] {

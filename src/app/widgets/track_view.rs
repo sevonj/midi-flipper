@@ -21,7 +21,7 @@ impl Widget for TrackView<'_> {
         let style = ui.style();
         let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
 
-        Frame::group(&style)
+        Frame::group(style)
             .inner_margin(0.)
             .outer_margin(0.)
             .corner_radius(0.)
