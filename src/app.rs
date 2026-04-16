@@ -230,8 +230,10 @@ impl MidiFlipperApp {
 
 impl App for MidiFlipperApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
+        // --- Setup
         install_image_loaders(ui.ctx());
 
+        // --- Amazin Professoinal Enterprise Quality Splash Screen
         if Instant::now() - self.start < Duration::from_secs(3) {
             const SPLASH_SIZE: Vec2 = Vec2 { x: 400.0, y: 300.0 };
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
@@ -251,6 +253,7 @@ impl App for MidiFlipperApp {
         ui.send_viewport_cmd(egui::ViewportCommand::Resizable(true));
         ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
 
+        // --- Actual UI
         self.menu_bar_panel(ui);
         self.tabs_panel(ui);
 
