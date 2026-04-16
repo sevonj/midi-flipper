@@ -88,7 +88,7 @@ fn regenerate_paint_cache(cache: &mut Vec<PaintableNote>, track: &midi_msg::Trac
     let mut time = 0.0;
 
     for event in track_events {
-        time += event.beat_or_frame;
+        time = event.beat_or_frame;
 
         let msg = match event.event {
             MidiMsg::ChannelVoice { msg, .. } => msg,
