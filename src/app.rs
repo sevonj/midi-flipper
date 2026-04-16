@@ -1,6 +1,6 @@
 mod data;
-mod panels;
 mod shortcuts;
+mod ui;
 mod widgets;
 
 use std::collections::VecDeque;
@@ -254,8 +254,8 @@ impl App for MidiFlipperApp {
         ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
 
         // --- Actual UI
-        self.menu_bar_panel(ui);
-        self.tabs_panel(ui);
+        self.menu_bar(ui);
+        self.tabs_bar(ui);
 
         match self.tab {
             AppTab::Session => self.tab_session(ui),

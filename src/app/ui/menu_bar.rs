@@ -12,8 +12,8 @@ use crate::app::shortcuts::SHORTCUT_FILE_SAVE;
 use crate::app::shortcuts::SHORTCUT_QUIT;
 
 impl MidiFlipperApp {
-    pub(crate) fn menu_bar_panel(&mut self, ui: &mut Ui) -> egui::Response {
-        Panel::top("menu_bar_panel")
+    pub(crate) fn menu_bar(&mut self, ui: &mut Ui) -> egui::Response {
+        Panel::top("menu_bar")
             .resizable(false)
             .show_separator_line(false)
             .frame(

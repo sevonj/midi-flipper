@@ -6,8 +6,8 @@ use crate::app::AppTab;
 use crate::app::widgets::Tab;
 
 impl MidiFlipperApp {
-    pub(crate) fn tabs_panel(&mut self, ui: &mut Ui) -> egui::Response {
-        Panel::top("tabs_panel")
+    pub(crate) fn tabs_bar(&mut self, ui: &mut Ui) -> egui::Response {
+        Panel::top("tabs_bar")
             .show_inside(ui, |ui| {
                 ui.horizontal(|ui| {
                     Tab::value(
