@@ -3,9 +3,7 @@ use egui::Label;
 use egui::RichText;
 use egui::Widget;
 
-use crate::app::session::SessionTrack;
-
-const HEIGHT: f32 = 64.0;
+use crate::app::data::SessionTrack;
 
 pub struct TrackView<'a> {
     index: usize,
@@ -20,17 +18,19 @@ impl<'a> TrackView<'a> {
 
 impl Widget for TrackView<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.horizontal(|ui| {
-            let style = ui.style();
-            let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
+        let style = ui.style();
+        let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
 
-            Frame::group(&style)
-                .inner_margin(0.)
-                .outer_margin(0.)
-                .corner_radius(0.)
-                .fill(weak_bg_fill)
-                .show(ui, |ui| {
-                    ui.set_height(HEIGHT);
+        Frame::group(&style)
+            .inner_margin(0.)
+            .outer_margin(0.)
+            .corner_radius(0.)
+            .fill(weak_bg_fill)
+            .show(ui, |ui| {
+                let height = ui.available_height();
+
+                ui.horizontal(|ui| {
+                    ui.set_height(height);
                     ui.set_width(ui.available_width());
 
                     ui.horizontal_centered(|ui| {
@@ -43,11 +43,11 @@ impl Widget for TrackView<'_> {
 
                     ui.vertical(|ui| {
                         track_name_label(ui, self.track);
-                        ui.checkbox(self.track.flip_mut(), "Flip");
+                        ui.checkbox(self.track.flip_enabled_mut(), "Flip");
                     });
                 })
-        })
-        .response
+            })
+            .response
     }
 }
 

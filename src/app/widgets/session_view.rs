@@ -4,7 +4,7 @@ use egui::Slider;
 use egui::Vec2b;
 use egui::Widget;
 
-use crate::app::session::Session;
+use crate::app::data::Session;
 use crate::util;
 
 pub struct SessionView<'a> {

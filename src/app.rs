@@ -1,5 +1,5 @@
+mod data;
 mod panels;
-mod session;
 mod shortcuts;
 mod widgets;
 
@@ -23,7 +23,7 @@ use egui_toast::Toasts;
 use rfd::FileDialog;
 
 use crate::MidiFlipperError;
-use crate::app::session::Session;
+use crate::app::data::Session;
 use crate::app::widgets::LogView;
 use crate::app::widgets::SessionTracksView;
 use crate::app::widgets::SessionView;

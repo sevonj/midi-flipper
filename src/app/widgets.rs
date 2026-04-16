@@ -11,5 +11,5 @@ pub use session_tracks_view::SessionTracksView;
 pub use session_view::SessionView;
 pub use status_page::StatusPage;
 pub use tab::Tab;
-pub use track_view::TrackView;
 pub use track_preview::TrackPreview;
+pub use track_view::TrackView;
