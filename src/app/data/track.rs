@@ -1,26 +1,8 @@
-use egui::Vec2;
-use egui::vec2;
 use midi_msg::ChannelVoiceMsg;
 use midi_msg::MidiMsg;
 use midi_msg::TrackEvent;
 
-#[derive(Debug)]
-pub struct CachedNote {
-    points: [Vec2; 2],
-}
-
-impl CachedNote {
-    pub fn new(note: u8, start: f32, end: f32) -> Self {
-        let y = note as f32;
-        Self {
-            points: [vec2(start, y), vec2(end, y)],
-        }
-    }
-
-    pub fn points(&self) -> &[Vec2; 2] {
-        &self.points
-    }
-}
+use crate::app::data::PaintableNote;
 
 #[derive(Debug)]
 pub struct SessionTrack {
@@ -28,7 +10,7 @@ pub struct SessionTrack {
     track_original: midi_msg::Track,
     flip_enabled: bool,
 
-    paint_cache_og: Vec<CachedNote>,
+    paint_cache_og: Vec<PaintableNote>,
 }
 
 impl SessionTrack {
@@ -62,7 +44,7 @@ impl SessionTrack {
         &mut self.flip_enabled
     }
 
-    pub fn note_paint_cache(&self) -> &[CachedNote] {
+    pub fn note_paint_cache(&self) -> &[PaintableNote] {
         &self.paint_cache_og
     }
 
@@ -95,7 +77,7 @@ impl SessionTrack {
     }
 }
 
-fn regenerate_paint_cache(cache: &mut Vec<CachedNote>, track: &midi_msg::Track) {
+fn regenerate_paint_cache(cache: &mut Vec<PaintableNote>, track: &midi_msg::Track) {
     cache.clear();
 
     let midi_msg::Track::Midi(track_events) = &track else {
@@ -134,14 +116,14 @@ fn regenerate_paint_cache(cache: &mut Vec<CachedNote>, track: &midi_msg::Track) 
             let Some(start) = open_notes[note as usize].take() else {
                 continue;
             };
-            cache.push(CachedNote::new(note, start, time));
+            cache.push(PaintableNote::new(note, start, time));
         }
     }
 
     // Check for unclosed notes
     for (note, start) in open_notes.into_iter().enumerate() {
         if let Some(start) = start {
-            cache.push(CachedNote::new(note as u8, start, time));
+            cache.push(PaintableNote::new(note as u8, start, time));
         }
     }
 }
