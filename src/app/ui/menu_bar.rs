@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use egui::Button;
 use egui::Frame;
 use egui::MenuBar;

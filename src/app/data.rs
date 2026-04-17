@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 mod flip_settings;
 mod paintable_note;
 mod session;

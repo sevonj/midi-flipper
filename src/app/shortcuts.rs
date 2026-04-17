@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use egui::Key;
 use egui::KeyboardShortcut as SCut;
 use egui::Modifiers;
