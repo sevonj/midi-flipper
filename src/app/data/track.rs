@@ -1,38 +1,37 @@
-use midi_msg::ChannelVoiceMsg;
-use midi_msg::MidiMsg;
-use midi_msg::TrackEvent;
+pub(super) mod midi_data;
 
-use crate::app::data::PaintableNote;
+use midi_msg::Track as MidiTrack;
+
+use crate::app::data::FlipSettings;
+use midi_data::TrackMidiData;
 
 #[derive(Debug)]
 pub struct SessionTrack {
     name: Option<String>,
     length: f32,
-    track_original: midi_msg::Track,
-    flip_enabled: bool,
-    paint_cache_og: Vec<PaintableNote>,
+
+    track_original: TrackMidiData,
+    track_flipped: TrackMidiData,
+
+    settings: FlipSettings,
 }
 
 impl SessionTrack {
-    pub fn from_track(track: midi_msg::Track) -> Self {
-        let name = Self::find_name(&track);
-        let length = if let midi_msg::Track::Midi(track_events) = &track
-            && let Some(last) = track_events.last()
-        {
-            last.beat_or_frame
-        } else {
-            0.0
-        };
+    pub fn from_track(midi_track: MidiTrack, center_note: u8) -> Self {
+        let settings = FlipSettings::new(center_note);
+        let track_original = TrackMidiData::new(midi_track);
 
-        let mut paint_cache_og = vec![];
-        regenerate_paint_cache(&mut paint_cache_og, &track);
+        let name = track_original.find_name();
+        let length = track_original.length();
+
+        let track_flipped = track_original.clone().flipped(&settings);
 
         Self {
             name,
             length,
-            track_original: track,
-            flip_enabled: true,
-            paint_cache_og,
+            track_original,
+            track_flipped,
+            settings,
         }
     }
 
@@ -44,98 +43,51 @@ impl SessionTrack {
         self.length
     }
 
-    pub fn track(&self) -> &midi_msg::Track {
+    pub fn track_original(&self) -> &TrackMidiData {
         &self.track_original
     }
 
+    pub fn track_flipped(&self) -> &TrackMidiData {
+        &self.track_flipped
+    }
+
     pub fn flip_enabled(&self) -> bool {
-        self.flip_enabled
+        self.settings.enabled
     }
 
-    pub fn flip_enabled_mut(&mut self) -> &mut bool {
-        &mut self.flip_enabled
+    pub fn set_flip_enabled(&mut self, flip_enabled: bool) {
+        self.settings.enabled = flip_enabled;
+        self.reflip();
     }
 
-    pub fn note_paint_cache(&self) -> &[PaintableNote] {
-        &self.paint_cache_og
+    pub(super) fn set_center_note(&mut self, center_note: u8) {
+        self.settings.global_center = center_note;
+        self.reflip();
+    }
+
+    pub fn transposition(&self) -> i32 {
+        self.settings.transpose
+    }
+
+    pub fn set_transposition(&mut self, transposition: i32) {
+        self.settings.transpose = transposition.clamp(-127, 127);
+        self.reflip();
+    }
+
+    pub fn ignore_ch10(&self) -> bool {
+        self.settings.ignore_ch10
+    }
+
+    pub fn set_ignore_ch10(&mut self, ignore_ch10: bool) {
+        self.settings.ignore_ch10 = ignore_ch10;
+        self.reflip();
     }
 
     pub fn is_midi(&self) -> bool {
-        matches!(self.track_original, midi_msg::Track::Midi(_))
+        self.track_original.is_midi()
     }
 
-    pub fn events(&self) -> Option<&Vec<TrackEvent>> {
-        let midi_msg::Track::Midi(track_events) = &self.track_original else {
-            return None;
-        };
-        Some(track_events)
-    }
-
-    fn find_name(track: &midi_msg::Track) -> Option<String> {
-        let midi_msg::Track::Midi(events) = track else {
-            return None;
-        };
-
-        for track_event in events {
-            let MidiMsg::Meta { msg } = &track_event.event else {
-                continue;
-            };
-            let midi_msg::Meta::TrackName(name) = msg else {
-                continue;
-            };
-            return Some(name.to_owned());
-        }
-        None
-    }
-}
-
-fn regenerate_paint_cache(cache: &mut Vec<PaintableNote>, track: &midi_msg::Track) {
-    cache.clear();
-
-    let midi_msg::Track::Midi(track_events) = &track else {
-        return;
-    };
-
-    let mut open_notes = [None::<f32>; 128];
-    let mut time = 0.0;
-
-    for event in track_events {
-        time = event.beat_or_frame;
-
-        let msg = match event.event {
-            MidiMsg::ChannelVoice { msg, .. } => msg,
-            MidiMsg::RunningChannelVoice { msg, .. } => msg,
-            _ => continue,
-        };
-
-        let (note, note_on) = match msg {
-            ChannelVoiceMsg::NoteOn { note, .. } | ChannelVoiceMsg::HighResNoteOn { note, .. } => {
-                (note, true)
-            }
-            ChannelVoiceMsg::NoteOff { note, .. }
-            | ChannelVoiceMsg::HighResNoteOff { note, .. } => (note, false),
-            _ => continue,
-        };
-
-        if note > 127 {
-            continue;
-        }
-
-        if note_on {
-            open_notes[note as usize] = Some(time);
-        } else {
-            // note_off
-            let Some(start) = open_notes[note as usize].take() else {
-                continue;
-            };
-            cache.push(PaintableNote::new(note, start, time));
-        }
-    }
-
-    // Check for unclosed notes
-    for (note, start) in open_notes.into_iter().enumerate() {
-        if let Some(start) = start {
-            cache.push(PaintableNote::new(note as u8, start, time));
-        }
+    fn reflip(&mut self) {
+        self.track_flipped = self.track_original.clone().flipped(&self.settings);
     }
 }

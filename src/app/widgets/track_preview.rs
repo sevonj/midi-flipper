@@ -6,6 +6,7 @@ use egui::Widget;
 use egui::vec2;
 
 use crate::app::data::SessionTrack;
+use crate::app::data::TrackMidiData;
 
 pub struct TrackPreview<'a> {
     index: usize,
@@ -37,6 +38,7 @@ impl Widget for TrackPreview<'_> {
         ui.set_height(height);
         ui.set_width(width);
 
+        let color_og = Color32::from_hex("#7c6f64").unwrap();
         let color = match self.index % 16 {
             0 => Color32::from_hex("#BC3B2B"),
             1 => Color32::from_hex("#979634"),
@@ -64,16 +66,13 @@ impl Widget for TrackPreview<'_> {
             ui.available_rect_before_wrap(),
         );
 
-        let stroke = Stroke::new(3.0, color);
         let pos = ui.next_widget_position();
-        for note in self.track.note_paint_cache() {
-            let offset = vec2(*self.offset, 0.0);
-            let mult = vec2(*self.zoom, height / 128.0);
 
-            let a = pos + (note.points()[0] - offset) * mult;
-            let b = pos + (note.points()[1] - offset) * mult;
-
-            painter.line(vec![a, b], stroke);
+        if self.track.flip_enabled() {
+            self.paint_track(height, color_og, &painter, pos, self.track.track_original());
+            self.paint_track(height, color, &painter, pos, self.track.track_flipped());
+        } else {
+            self.paint_track(height, color, &painter, pos, self.track.track_original());
         }
 
         let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
@@ -113,5 +112,27 @@ impl Widget for TrackPreview<'_> {
         }
 
         response
+    }
+}
+
+impl TrackPreview<'_> {
+    fn paint_track(
+        &self,
+        height: f32,
+        color: Color32,
+        painter: &Painter,
+        pos: egui::Pos2,
+        track: &TrackMidiData,
+    ) {
+        let stroke = Stroke::new(2.0, color);
+        for note in track.paint_cache() {
+            let offset = vec2(*self.offset, 0.0);
+            let mult = vec2(*self.zoom, height / 128.0);
+
+            let a = pos + (note.points()[0] - offset) * mult;
+            let b = pos + (note.points()[1] - offset) * mult;
+
+            painter.line(vec![a, b], stroke);
+        }
     }
 }

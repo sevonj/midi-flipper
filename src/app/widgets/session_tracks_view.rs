@@ -8,7 +8,7 @@ use crate::app::data::Session;
 use crate::app::widgets::TrackPreview;
 use crate::app::widgets::TrackView;
 
-const HEIGHT: f32 = 64.0;
+const HEIGHT: f32 = 96.0;
 
 pub struct SessionTracksView<'a> {
     session: &'a mut Session,

@@ -1,7 +1,7 @@
 use egui::Vec2;
 use egui::vec2;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct PaintableNote {
     points: [Vec2; 2],
 }

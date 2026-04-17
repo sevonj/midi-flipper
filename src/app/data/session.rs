@@ -1,12 +1,11 @@
 use std::path::PathBuf;
 
-use midi_msg::Channel;
 use midi_msg::MidiFile;
 
 use crate::MidiFlipperError;
 use crate::app::data::SessionTrack;
 
-const MIDDLE_C: u8 = 60; // 60 is C4
+const MIDDLE_C: u8 = 60;
 
 #[derive(Debug)]
 pub struct Session {
@@ -14,32 +13,36 @@ pub struct Session {
     length: f32,
     midi_header: midi_msg::Header,
     tracks: Vec<SessionTrack>,
-    flipped_midi: Option<Box<MidiFile>>,
-    ignore_ch10: bool,
-    flip_center: u8,
+
+    center_note: u8,
 }
 
 impl Session {
-    pub fn new(name: String, midi_file: MidiFile) -> Self {
+    pub fn new(name: String, midi_file: MidiFile) -> Result<Self, MidiFlipperError> {
+        let validate = MidiFile::from_midi(&midi_file.to_midi());
+        if validate.is_err() {
+            return Err(MidiFlipperError::MidiValidationFailed);
+        }
+
+        let center_note = MIDDLE_C;
+
         let mut tracks = Vec::with_capacity(midi_file.tracks.len());
         let mut length = 0.0;
         for track in midi_file.tracks {
-            let session_track = SessionTrack::from_track(track);
+            let session_track = SessionTrack::from_track(track, center_note);
             if session_track.length() > length {
                 length = session_track.length();
             }
             tracks.push(session_track);
         }
 
-        Self {
+        Ok(Self {
             name,
             midi_header: midi_file.header,
             length,
             tracks,
-            flipped_midi: None,
-            ignore_ch10: true,
-            flip_center: MIDDLE_C,
-        }
+            center_note,
+        })
     }
 
     pub fn from_file(file_path: PathBuf) -> Result<Self, MidiFlipperError> {
@@ -51,7 +54,7 @@ impl Session {
         let bytes = std::fs::read(file_path)?;
         let midi_file = MidiFile::from_midi(&bytes)?;
 
-        Ok(Self::new(name, midi_file))
+        Self::new(name, midi_file)
     }
 
     pub fn name(&self) -> &str {
@@ -70,95 +73,35 @@ impl Session {
         &mut self.tracks
     }
 
-    pub fn flipped_midi(&self) -> Option<&MidiFile> {
-        self.flipped_midi.as_deref()
+    pub fn center_note(&self) -> u8 {
+        self.center_note
     }
 
-    pub fn ignore_ch10(&self) -> bool {
-        self.ignore_ch10
+    pub fn set_center_note(&mut self, center_note: u8) {
+        self.center_note = center_note;
+        for track in &mut self.tracks {
+            track.set_center_note(center_note);
+        }
     }
 
-    pub fn ignore_ch10_mut(&mut self) -> &mut bool {
-        &mut self.ignore_ch10
+    pub fn reset_center_note(&mut self) {
+        self.set_center_note(MIDDLE_C);
     }
 
-    pub fn flip_center(&self) -> u8 {
-        self.flip_center
-    }
-
-    pub fn flip_center_mut(&mut self) -> &mut u8 {
-        &mut self.flip_center
-    }
-
-    pub fn reset_flip_center(&mut self) {
-        self.flip_center = MIDDLE_C;
-    }
-
-    pub fn flip(&mut self) -> Result<(), MidiFlipperError> {
-        let mut midi_tracks = Vec::with_capacity(self.tracks.len());
-        for session_track in &self.tracks {
-            let mut track = session_track.track().clone();
-            if session_track.flip_enabled() {
-                self.flip_track(&mut track);
-            }
-            midi_tracks.push(track);
+    pub fn assemble_flipped_midi(&self) -> MidiFile {
+        let mut tracks = Vec::with_capacity(self.tracks.len());
+        for track in &self.tracks {
+            let midi_track = if track.flip_enabled() {
+                track.track_flipped().midi_track().clone()
+            } else {
+                track.track_original().midi_track().clone()
+            };
+            tracks.push(midi_track);
         }
 
-        let flipped = MidiFile {
+        MidiFile {
             header: self.midi_header.clone(),
-            tracks: midi_tracks,
-        };
-
-        let validate = MidiFile::from_midi(&flipped.to_midi());
-        if validate.is_err() {
-            return Err(MidiFlipperError::OutputValidationFailed);
-        }
-
-        self.flipped_midi = Some(Box::new(flipped));
-
-        Ok(())
-    }
-
-    fn flip_track(&self, track: &mut midi_msg::Track) {
-        let midi_msg::Track::Midi(track_events) = track else {
-            return;
-        };
-
-        for track_event in track_events {
-            let (channel, msg) = match &mut track_event.event {
-                midi_msg::MidiMsg::ChannelVoice { channel, msg, .. } => (channel, msg),
-                midi_msg::MidiMsg::RunningChannelVoice { channel, msg } => (channel, msg),
-                _ => continue,
-            };
-
-            if self.ignore_ch10 && *channel == Channel::Ch10 {
-                continue;
-            }
-
-            let note = match msg {
-                midi_msg::ChannelVoiceMsg::NoteOn { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::NoteOff { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::HighResNoteOn { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::HighResNoteOff { note, .. } => note,
-                midi_msg::ChannelVoiceMsg::PolyPressure { note, .. } => note,
-                // midi_msg::ChannelVoiceMsg::PitchBend { bend } => {
-                //    // TODO: flip bend
-                //    continue;
-                //}
-                _ => continue,
-            };
-
-            let flip_center = self.flip_center as i32;
-            let mut mapped = flip_center + (flip_center - *note as i32);
-
-            while mapped > 127 {
-                mapped -= 12;
-            }
-            while mapped < 0 {
-                mapped += 12;
-            }
-
-            *note = mapped as u8;
+            tracks,
         }
     }
 }

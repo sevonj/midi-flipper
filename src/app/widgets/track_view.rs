@@ -1,3 +1,4 @@
+use egui::Checkbox;
 use egui::Frame;
 use egui::Label;
 use egui::RichText;
@@ -42,8 +43,80 @@ impl Widget for TrackView<'_> {
                     ui.separator();
 
                     ui.vertical(|ui| {
-                        track_name_label(ui, self.track);
-                        ui.checkbox(self.track.flip_enabled_mut(), "Flip");
+                        ui.style_mut().spacing.item_spacing.y = 1.0;
+
+                        ui.horizontal(|ui| {
+                            let mut flip_enabled = self.track.flip_enabled();
+                            if ui.add(Checkbox::new(&mut flip_enabled, "")).changed() {
+                                self.track.set_flip_enabled(flip_enabled);
+                            }
+                            ui.add(
+                                Label::new(track_name(self.track))
+                                    .wrap_mode(egui::TextWrapMode::Truncate),
+                            )
+                            .on_hover_text("Flip me?");
+                        });
+
+                        ui.separator();
+
+                        ui.vertical(|ui| {
+                            let mut transposition = self.track.transposition();
+
+                            ui.horizontal(|ui| {
+                                let sign = if transposition > 0 { "+" } else { "" };
+                                let octaves = transposition / 12;
+                                let oct_string = if octaves != 0 {
+                                    format!("{octaves}:")
+                                } else {
+                                    String::new()
+                                };
+                                let semitones = transposition % 12;
+                                ui.label(format!("Transposition: {sign}{oct_string}{semitones}"));
+                            });
+
+                            ui.horizontal(|ui| {
+                                ui.style_mut().spacing.item_spacing.x = 1.0;
+
+                                if ui.button("Reset").clicked() {
+                                    transposition = 0;
+                                    self.track.set_transposition(transposition);
+                                }
+
+                                ui.add_space(3.0);
+
+                                if ui.button("+1").clicked() {
+                                    transposition += 1;
+                                    self.track.set_transposition(transposition);
+                                }
+                                if ui.button("-1").clicked() {
+                                    transposition -= 1;
+                                    self.track.set_transposition(transposition);
+                                }
+
+                                ui.add_space(3.0);
+
+                                if ui.button("+Oct").clicked() {
+                                    transposition += 12;
+                                    self.track.set_transposition(transposition);
+                                }
+                                if ui.button("-Oct").clicked() {
+                                    transposition -= 12;
+                                    self.track.set_transposition(transposition);
+                                }
+
+                                ui.add_space(8.0);
+                            });
+                        });
+
+                        ui.separator();
+
+                        let mut ignore_ch10 = self.track.ignore_ch10();
+                        if ui
+                            .checkbox(&mut ignore_ch10, "Skip ch.10 (drums)")
+                            .changed()
+                        {
+                            self.track.set_ignore_ch10(ignore_ch10);
+                        }
                     });
                 })
             })
@@ -51,8 +124,8 @@ impl Widget for TrackView<'_> {
     }
 }
 
-fn track_name_label(ui: &mut egui::Ui, track: &mut SessionTrack) {
-    let text = if !track.is_midi() {
+fn track_name(track: &mut SessionTrack) -> RichText {
+    if !track.is_midi() {
         RichText::new("[unknown track type]").weak()
     } else if let Some(name) = track.name() {
         if name.is_empty() {
@@ -62,6 +135,5 @@ fn track_name_label(ui: &mut egui::Ui, track: &mut SessionTrack) {
         }
     } else {
         RichText::new("[unnamed track]").weak()
-    };
-    ui.add(Label::new(text).wrap_mode(egui::TextWrapMode::Truncate));
+    }
 }

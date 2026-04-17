@@ -53,6 +53,7 @@ pub struct MidiFlipperApp {
     log: VecDeque<String>,
     tab: AppTab,
     start: Instant,
+    splash_done: bool,
 }
 
 impl Default for MidiFlipperApp {
@@ -64,6 +65,7 @@ impl Default for MidiFlipperApp {
             log: Default::default(),
             tab: Default::default(),
             start: Instant::now(),
+            splash_done: false,
         }
     }
 }
@@ -100,19 +102,14 @@ impl MidiFlipperApp {
     }
 
     pub fn can_save(&self) -> bool {
-        let Some(session) = &self.session else {
-            return false;
-        };
-        session.flipped_midi().is_some()
+        self.session.is_some()
     }
 
     pub fn prompt_save_file(&mut self) {
         let Some(session) = &self.session else {
             return;
         };
-        let Some(flipped_midi) = session.flipped_midi() else {
-            return;
-        };
+        let flipped_midi = session.assemble_flipped_midi();
 
         let session_name = PathBuf::from(session.name());
         let stem = session_name
@@ -193,7 +190,7 @@ impl MidiFlipperApp {
         let text = match e {
             MidiFlipperError::Io(e) => e.to_string(),
             MidiFlipperError::MidiParse(e) => e.to_string(),
-            MidiFlipperError::OutputValidationFailed => String::from(
+            MidiFlipperError::MidiValidationFailed => String::from(
                 "Output validation failed. Probably because of this: https://github.com/AlexCharlton/midi-msg/issues/32",
             ),
         };
@@ -249,9 +246,13 @@ impl App for MidiFlipperApp {
             });
             return;
         }
-        ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
-        ui.send_viewport_cmd(egui::ViewportCommand::Resizable(true));
-        ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
+        if !self.splash_done {
+            ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
+            ui.send_viewport_cmd(egui::ViewportCommand::Resizable(true));
+            ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
+            ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(1600.0, 1024.0)));
+            self.splash_done = true;
+        }
 
         // --- Actual UI
         self.menu_bar(ui);
