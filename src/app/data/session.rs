@@ -15,6 +15,7 @@ pub struct Session {
     tracks: Vec<SessionTrack>,
 
     center_note: u8,
+    flip_bend: bool,
 }
 
 impl Session {
@@ -25,11 +26,12 @@ impl Session {
         }
 
         let center_note = MIDDLE_C;
+        let flip_bend = false;
 
         let mut tracks = Vec::with_capacity(midi_file.tracks.len());
         let mut length = 0.0;
         for track in midi_file.tracks {
-            let session_track = SessionTrack::from_track(track, center_note);
+            let session_track = SessionTrack::from_track(track, center_note, flip_bend);
             if session_track.length() > length {
                 length = session_track.length();
             }
@@ -42,6 +44,7 @@ impl Session {
             length,
             tracks,
             center_note,
+            flip_bend,
         })
     }
 
@@ -86,6 +89,17 @@ impl Session {
 
     pub fn reset_center_note(&mut self) {
         self.set_center_note(MIDDLE_C);
+    }
+
+    pub fn flip_bend(&self) -> bool {
+        self.flip_bend
+    }
+
+    pub fn set_flip_bend(&mut self, flip_bend: bool) {
+        self.flip_bend = flip_bend;
+        for track in &mut self.tracks {
+            track.set_flip_bend(flip_bend);
+        }
     }
 
     pub fn assemble_flipped_midi(&self) -> MidiFile {

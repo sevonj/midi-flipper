@@ -42,6 +42,11 @@ impl Widget for SessionView<'_> {
                                 }
                             });
 
+                            let mut flip_bend = self.session.flip_bend();
+                            if ui.checkbox(&mut flip_bend, "Flip pitch bend").changed() {
+                                self.session.set_flip_bend(flip_bend);
+                            }
+
                             ui.add_space(4.);
                         });
                     });

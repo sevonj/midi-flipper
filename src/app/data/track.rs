@@ -17,8 +17,8 @@ pub struct SessionTrack {
 }
 
 impl SessionTrack {
-    pub fn from_track(midi_track: MidiTrack, center_note: u8) -> Self {
-        let settings = FlipSettings::new(center_note);
+    pub fn from_track(midi_track: MidiTrack, center_note: u8, global_flip_bend: bool) -> Self {
+        let settings = FlipSettings::new(center_note, global_flip_bend);
         let track_original = TrackMidiData::new(midi_track);
 
         let name = track_original.find_name();
@@ -63,6 +63,11 @@ impl SessionTrack {
     pub(super) fn set_center_note(&mut self, center_note: u8) {
         self.settings.global_center = center_note;
         self.reflip();
+    }
+
+    pub(super) fn set_flip_bend(&mut self, flip_bend: bool) {
+        self.settings.global_flip_bend = flip_bend;
+        //self.reflip();
     }
 
     pub fn transposition(&self) -> i32 {

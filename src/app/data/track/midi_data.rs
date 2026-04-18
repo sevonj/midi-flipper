@@ -86,10 +86,12 @@ impl TrackMidiData {
                 midi_msg::ChannelVoiceMsg::HighResNoteOn { note, .. } => note,
                 midi_msg::ChannelVoiceMsg::HighResNoteOff { note, .. } => note,
                 midi_msg::ChannelVoiceMsg::PolyPressure { note, .. } => note,
-                // midi_msg::ChannelVoiceMsg::PitchBend { bend } => {
-                //    // TODO: flip bend
-                //    continue;
-                //}
+                midi_msg::ChannelVoiceMsg::PitchBend { bend } => {
+                    if settings.global_flip_bend {
+                        *bend = u16::MAX - *bend;
+                    }
+                    continue;
+                }
                 _ => continue,
             };
 
