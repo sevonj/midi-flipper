@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+    - "*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check if prerelase  
+      run: |
+        if [[ ${{ github.ref_name }} =~ -(alpha|beta|rc|test) ]]
+        then
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+        else
+          echo "PRERELEASE=false" >> $GITHUB_ENV
+        fi
+    - name: Install dependencies
+      run: sudo apt-get install -y gcc-mingw-w64-x86-64
+    - name: Add targets
+      run: rustup target add x86_64-unknown-linux-gnu && rustup target add x86_64-pc-windows-gnu
+    - name: Build Linux
+      run: cargo build --verbose --release --target=x86_64-unknown-linux-gnu
+    - name: Build Windows
+      run: cargo build --verbose --release --target=x86_64-pc-windows-gnu
+    - uses: ncipollo/release-action@v1
+      with:
+        artifacts: "target/x86_64-unknown-linux-gnu/release/sfontplayer,target/x86_64-pc-windows-gnu/release/sfontplayer.exe"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        prerelease: ${{ env.PRERELEASE }}
+        body: "Release contains binaries for Linux and Windows."
+        generateReleaseNotes: true
+        artifactErrorsFailBuild: true
+        
+          
