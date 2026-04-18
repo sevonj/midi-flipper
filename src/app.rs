@@ -223,7 +223,6 @@ impl App for MidiFlipperApp {
         if Instant::now() - self.start < Duration::from_secs(3) {
             const SPLASH_SIZE: Vec2 = Vec2 { x: 400.0, y: 300.0 };
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
-            ui.send_viewport_cmd(egui::ViewportCommand::Resizable(false));
             ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(SPLASH_SIZE));
             Image::from(egui::include_image!("../assets/bootsplash.png"))
                 .paint_at(ui, ui.content_rect());
@@ -237,9 +236,7 @@ impl App for MidiFlipperApp {
         }
         if !self.splash_done {
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
-            ui.send_viewport_cmd(egui::ViewportCommand::Resizable(true));
-            ui.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(Vec2::new(640.0, 480.0)));
-            ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(1600.0, 1024.0)));
+            ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(800.0, 600.0)));
             self.splash_done = true;
         }
 
