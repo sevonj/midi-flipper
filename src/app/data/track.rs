@@ -67,7 +67,7 @@ impl SessionTrack {
 
     pub(super) fn set_flip_bend(&mut self, flip_bend: bool) {
         self.settings.global_flip_bend = flip_bend;
-        //self.reflip();
+        self.reflip();
     }
 
     pub fn transposition(&self) -> i32 {
