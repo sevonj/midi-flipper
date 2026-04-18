@@ -25,14 +25,12 @@ use rfd::FileDialog;
 use crate::MidiFlipperError;
 use crate::app::data::Session;
 use crate::app::widgets::LogView;
-use crate::app::widgets::SessionTracksView;
 use crate::app::widgets::SessionView;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 enum AppTab {
     #[default]
     Session,
-    Tracks,
     Log,
 }
 
@@ -40,7 +38,6 @@ impl std::fmt::Display for AppTab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AppTab::Session => write!(f, "Session"),
-            AppTab::Tracks => write!(f, "Tracks"),
             AppTab::Log => write!(f, "Log"),
         }
     }
@@ -212,14 +209,6 @@ impl MidiFlipperApp {
         ui.add(SessionView::new(session));
     }
 
-    fn tab_tracks(&mut self, ui: &mut Ui) {
-        let Some(session) = &mut self.session else {
-            ui.add(widgets::StatusPage::status_nothing_open());
-            return;
-        };
-        ui.add(SessionTracksView::new(session));
-    }
-
     fn tab_log(&mut self, ui: &mut Ui) {
         ui.add(LogView::new(&self.log));
     }
@@ -260,7 +249,6 @@ impl App for MidiFlipperApp {
 
         match self.tab {
             AppTab::Session => self.tab_session(ui),
-            AppTab::Tracks => self.tab_tracks(ui),
             AppTab::Log => self.tab_log(ui),
         }
 

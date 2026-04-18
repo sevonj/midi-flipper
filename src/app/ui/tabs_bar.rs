@@ -20,13 +20,6 @@ impl MidiFlipperApp {
                     Tab::value(
                         ui,
                         &mut self.tab,
-                        AppTab::Tracks,
-                        &AppTab::Tracks.to_string(),
-                        "tab_tracks",
-                    );
-                    Tab::value(
-                        ui,
-                        &mut self.tab,
                         AppTab::Log,
                         &AppTab::Log.to_string(),
                         "tab_log",

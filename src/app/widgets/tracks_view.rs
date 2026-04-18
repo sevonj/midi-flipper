@@ -10,17 +10,17 @@ use crate::app::widgets::TrackView;
 
 const HEIGHT: f32 = 96.0;
 
-pub struct SessionTracksView<'a> {
+pub struct TracksView<'a> {
     session: &'a mut Session,
 }
 
-impl<'a> SessionTracksView<'a> {
+impl<'a> TracksView<'a> {
     pub fn new(session: &'a mut Session) -> Self {
         Self { session }
     }
 }
 
-impl Widget for SessionTracksView<'_> {
+impl Widget for TracksView<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let length = self.session.length();
 
@@ -42,8 +42,6 @@ impl Widget for SessionTracksView<'_> {
 
         let response = CentralPanel::default()
             .show_inside(ui, |ui| {
-                ui.label(self.session.name());
-
                 let item_spacing = ui.style().spacing.item_spacing;
                 ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
 
