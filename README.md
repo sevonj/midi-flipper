@@ -10,4 +10,4 @@ This tool might help if
 - [Your music doesn't sound serious enough](https://web.archive.org/web/20210725090647/https://old.reddit.com/r/musicproduction/comments/oqzsa7/how_do_you_make_a_melody_more_serious_sounding/)
 - You just want to listen to garbage
 
-<img width="1600" height="1056" alt="Screenshot from 2026-04-17 17-07-48" src="https://github.com/user-attachments/assets/f60b709b-6484-49bf-aeac-2f8294f57039" />
+<img width="800" height="600" alt="Screenshot From 2026-04-18 17-34-56" src="https://github.com/user-attachments/assets/d279b6c6-4639-4185-84ea-de67d3911cfd" />
