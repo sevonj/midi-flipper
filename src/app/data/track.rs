@@ -21,8 +21,7 @@ impl SessionTrack {
         let settings = FlipSettings::new(center_note, global_flip_bend);
         let track_original = TrackMidiData::new(midi_track);
 
-        let name = track_original.find_name();
-        let length = track_original.length();
+        let (name, length) = track_original.find_meta();
 
         let track_flipped = track_original.clone().flipped(&settings);
 

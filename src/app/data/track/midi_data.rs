@@ -35,34 +35,28 @@ impl TrackMidiData {
         &self.paint_cache
     }
 
-    pub fn length(&self) -> f32 {
-        if let MidiTrack::Midi(track_events) = &self.midi_track
-            && let Some(last) = track_events.last()
-        {
-            return last.beat_or_frame;
-        }
-        0.0
-    }
-
     pub(crate) fn is_midi(&self) -> bool {
         matches!(self.midi_track, MidiTrack::Midi(_))
     }
 
-    pub fn find_name(&self) -> Option<String> {
+    pub fn find_meta(&self) -> (Option<String>, f32) {
         let MidiTrack::Midi(events) = &self.midi_track else {
-            return None;
+            return (None, 0.0);
         };
 
+        let mut time = 0.0;
+        let mut found_name = None;
+
         for track_event in events {
+            time += track_event.delta_time as f32;
             let MidiMsg::Meta { msg } = &track_event.event else {
                 continue;
             };
-            let midi_msg::Meta::TrackName(name) = msg else {
-                continue;
-            };
-            return Some(name.to_owned());
+            if let Meta::TrackName(name) = msg {
+                found_name = Some(name.to_string());
+            }
         }
-        None
+        return (found_name, time);
     }
 
     pub fn flip(&mut self, settings: &FlipSettings) {
@@ -122,7 +116,7 @@ impl TrackMidiData {
         let mut time = 0.0;
 
         for event in track_events {
-            time = event.beat_or_frame;
+            time += event.delta_time as f32;
 
             let msg = match event.event {
                 MidiMsg::ChannelVoice { msg, .. } => msg,
