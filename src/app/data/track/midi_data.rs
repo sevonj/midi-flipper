@@ -58,7 +58,7 @@ impl TrackMidiData {
                 found_name = Some(name.to_string());
             }
         }
-        return (found_name, time);
+        (found_name, time)
     }
 
     pub fn flip(&mut self, settings: &FlipSettings) {
