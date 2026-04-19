@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use egui::Vec2;
 use egui::vec2;
 use midi_msg::FileTimeSignature;
+use midi_msg::Meta;
 use midi_msg::MidiFile;
 
 use crate::MidiFlipperError;
@@ -18,6 +19,7 @@ pub struct Session {
     length: f32,
     midi_header: midi_msg::Header,
     tracks: Vec<SessionTrack>,
+    marker_events: Vec<(f64, Meta)>,
     beats_paint_cache: Vec<([Vec2; 2], bool)>,
 
     center_note: u8,
@@ -49,6 +51,7 @@ impl Session {
             midi_header: midi_file.header,
             length,
             tracks,
+            marker_events: vec![],
             beats_paint_cache: vec![],
             center_note,
             flip_bend,
@@ -88,6 +91,10 @@ impl Session {
 
     pub fn beats_paint_cache(&self) -> &[([Vec2; 2], bool)] {
         &self.beats_paint_cache
+    }
+
+    pub fn marker_events(&self) -> &[(f64, Meta)] {
+        &self.marker_events
     }
 
     pub fn center_note(&self) -> u8 {
@@ -200,10 +207,15 @@ impl Session {
 
             if let midi_msg::MidiMsg::Meta { msg } = &track_event.event {
                 match msg {
-                    midi_msg::Meta::TimeSignature(ts) => {
+                    Meta::TimeSignature(ts) => {
                         time_signature = ts.clone();
                         note_len = ticks_in_whole / time_signature.denominator;
                         beat = 0;
+
+                        self.marker_events.push((*time, msg.clone()));
+                    }
+                    Meta::Marker(_) | Meta::EndOfTrack | Meta::SetTempo(_) => {
+                        self.marker_events.push((*time, msg.clone()));
                     }
                     _ => (),
                 }
