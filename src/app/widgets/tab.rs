@@ -1,28 +1,38 @@
 use std::hash::Hash;
 
+use egui::Button;
 use egui::Frame;
 use egui::Label;
+use egui::Painter;
 use egui::RichText;
 use egui::Sense;
-use egui::Shadow;
 use egui::Stroke;
 use egui::Ui;
 use egui::UiBuilder;
 use egui::Widget;
+use egui::pos2;
 
 pub struct Tab<'a> {
     text: &'a str,
-    is_current: bool,
     id: egui::Id,
+    is_current: bool,
+    is_closed: Option<&'a mut bool>,
 }
 
 impl<'a> Tab<'a> {
     pub fn new(text: &'a str, is_current: bool, id_salt: impl Hash) -> Self {
         Self {
             text,
-            is_current,
             id: egui::Id::new(id_salt),
+            is_current,
+            is_closed: None,
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn closable(mut self, signal: &'a mut bool) -> Self {
+        self.is_closed = Some(signal);
+        self
     }
 
     pub fn value<Value: PartialEq>(
@@ -56,22 +66,13 @@ impl Widget for Tab<'_> {
             } else {
                 style.visuals.faint_bg_color
             };
-            let shadow = Shadow {
-                offset: [0, 2],
-                color: if self.is_current {
-                    style.visuals.selection.bg_fill
-                } else {
-                    fill
-                },
-                ..Default::default()
-            };
+
             Frame::group(&style)
                 .inner_margin(4.)
                 .outer_margin(0.)
                 .corner_radius(0.)
                 .stroke(Stroke::NONE)
                 .fill(fill)
-                .shadow(shadow)
                 .show(ui, |ui| {
                     ui.style_mut().spacing.item_spacing.x = 0.0;
                     ui.add_space(4.0);
@@ -82,18 +83,28 @@ impl Widget for Tab<'_> {
                         .selectable(false),
                     );
 
-                    ui.add_space(6.0);
+                    if let Some(is_closed) = self.is_closed {
+                        ui.add_space(6.0);
 
-                    //let close_symbol = "❌";
-                    //if ui
-                    //    .add(Button::new(RichText::new(close_symbol).size(14.0)).frame(false))
-                    //    .on_hover_text("Close this playlist")
-                    //    .clicked()
-                    //{
-                    //    let _ = player.remove_playlist(index);
-                    //}
+                        if ui
+                            .add(Button::new(RichText::new("❌").size(14.0)).frame(false))
+                            .on_hover_text("Close Tab")
+                            .clicked()
+                        {
+                            *is_closed = true;
+                        }
+                    }
                     ui.add_space(2.0);
                 });
+
+            if self.is_current {
+                let rect = response.rect;
+                let painter = Painter::new(ui.ctx().clone(), ui.layer_id(), rect);
+                let a = pos2(rect.min.x, rect.max.y);
+                let b = rect.max;
+                painter.line(vec![a, b], Stroke::new(4., style.visuals.selection.bg_fill));
+            }
+
             response
         })
         .inner
