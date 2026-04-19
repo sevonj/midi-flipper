@@ -1,4 +1,5 @@
 use midi_msg::ChannelVoiceMsg;
+use midi_msg::Meta;
 use midi_msg::MidiMsg;
 use midi_msg::Track as MidiTrack;
 

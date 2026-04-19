@@ -1,5 +1,8 @@
 use std::path::PathBuf;
 
+use egui::Vec2;
+use egui::vec2;
+use midi_msg::FileTimeSignature;
 use midi_msg::MidiFile;
 
 use crate::MidiFlipperError;
@@ -13,6 +16,7 @@ pub struct Session {
     length: f32,
     midi_header: midi_msg::Header,
     tracks: Vec<SessionTrack>,
+    beats_paint_cache: Vec<([Vec2; 2], bool)>,
 
     center_note: u8,
     flip_bend: bool,
@@ -38,14 +42,18 @@ impl Session {
             tracks.push(session_track);
         }
 
-        Ok(Self {
+        let mut this = Self {
             name,
             midi_header: midi_file.header,
             length,
             tracks,
+            beats_paint_cache: vec![],
             center_note,
             flip_bend,
-        })
+        };
+        this.generate_bg_paint_cache();
+
+        Ok(this)
     }
 
     pub fn from_file(file_path: PathBuf) -> Result<Self, MidiFlipperError> {
@@ -74,6 +82,10 @@ impl Session {
 
     pub fn tracks_mut(&mut self) -> &mut [SessionTrack] {
         &mut self.tracks
+    }
+
+    pub fn beats_paint_cache(&self) -> &[([Vec2; 2], bool)] {
+        &self.beats_paint_cache
     }
 
     pub fn center_note(&self) -> u8 {
@@ -117,5 +129,87 @@ impl Session {
             header: self.midi_header.clone(),
             tracks,
         }
+    }
+
+    fn generate_bg_paint_cache(&mut self) {
+        let midi_msg::Division::TicksPerQuarterNote(ticks_in_quarter) = self.midi_header.division
+        else {
+            println!("unhandled division");
+            return;
+        };
+        let ticks_in_whole = ticks_in_quarter * 4;
+        let mut cache = vec![];
+
+        let mut time_signature = FileTimeSignature {
+            numerator: 4,
+            denominator: 4,
+            clocks_per_metronome_tick: 24,
+            thirty_second_notes_per_24_clocks: 8,
+        };
+        let mut note_len = ticks_in_whole / time_signature.denominator;
+        let mut beat = 0;
+        let mut next_note_time = 0.0;
+
+        let mut tracks: Vec<_> = self
+            .tracks
+            .iter()
+            .map(|t| t.track_original().midi_track().events().iter())
+            .collect();
+
+        let mut next_events: Vec<_> = tracks.iter_mut().map(|i| (0.0, i.next())).collect();
+
+        loop {
+            let Some(next_track) = ({
+                let mut lowest_time = f64::INFINITY;
+                let mut next_track = None;
+
+                for (i, (prev_time, event)) in next_events.iter().enumerate() {
+                    let Some(event) = event else {
+                        continue;
+                    };
+                    let ev_time = prev_time + event.delta_time as f64;
+                    if ev_time < lowest_time {
+                        lowest_time = ev_time;
+                        next_track = Some(i);
+                    }
+                }
+                next_track
+            }) else {
+                break;
+            };
+
+            let (time, event) = &mut next_events[next_track];
+            let track_event = event.as_deref().unwrap();
+
+            *time += track_event.delta_time as f64;
+
+            while *time > next_note_time {
+                cache.push((
+                    [
+                        vec2(next_note_time as f32, 0.0),
+                        vec2(next_note_time as f32, 1.0),
+                    ],
+                    beat == 0,
+                ));
+                next_note_time += note_len as f64;
+                beat += 1;
+                beat %= time_signature.denominator;
+            }
+
+            if let midi_msg::MidiMsg::Meta { msg } = &track_event.event {
+                match msg {
+                    midi_msg::Meta::TimeSignature(ts) => {
+                        time_signature = ts.clone();
+                        note_len = ticks_in_whole / time_signature.denominator;
+                        beat = 0;
+                    }
+                    _ => (),
+                }
+            };
+
+            *event = tracks[next_track].next();
+        }
+
+        self.beats_paint_cache = cache;
     }
 }

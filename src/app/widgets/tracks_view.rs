@@ -1,6 +1,10 @@
 use egui::CentralPanel;
+use egui::Color32;
+use egui::Painter;
+use egui::Stroke;
 use egui::Vec2;
 use egui::Widget;
+use egui::vec2;
 use egui_extras::Column;
 use egui_extras::TableBuilder;
 
@@ -51,6 +55,8 @@ impl Widget for TracksView<'_> {
                     .resizable(true)
                     .column(Column::remainder());
 
+                let beats_paint_cache = self.session.beats_paint_cache().to_vec();
+
                 tablebuilder.body(|body| {
                     body.rows(HEIGHT, self.session.tracks().len(), |mut row| {
                         let index = row.index();
@@ -62,6 +68,27 @@ impl Widget for TracksView<'_> {
                         row.col(|ui| {
                             ui.style_mut().spacing.item_spacing = item_spacing;
                             ui.set_width(length * zoom);
+
+                            let color = Color32::from_hex("#7c6f6477").unwrap();
+                            let color2 = Color32::from_hex("#7c6f643f").unwrap();
+                            let painter = Painter::new(
+                                ui.ctx().clone(),
+                                ui.layer_id(),
+                                ui.available_rect_before_wrap(),
+                            );
+                            let pos = ui.next_widget_position();
+                            let offset2 = vec2(offset, 0.0);
+                            let mult = vec2(zoom, HEIGHT);
+                            let stroke = Stroke::new(2., color);
+                            let stroke2 = Stroke::new(1., color2);
+
+                            for line in &beats_paint_cache {
+                                let a = pos + (line.0[0] - offset2) * mult;
+                                let b = pos + (line.0[1] - offset2) * mult;
+
+                                painter.line(vec![a, b], if line.1 { stroke } else { stroke2 });
+                            }
+
                             ui.add(TrackPreview::new(index, track, &mut zoom, &mut offset));
                             offset = offset.clamp(0.0, length);
                         });
