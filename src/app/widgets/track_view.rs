@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use egui::Checkbox;
 use egui::Frame;
 use egui::Label;

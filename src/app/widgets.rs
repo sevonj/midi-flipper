@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 mod log_view;
 mod session_view;
 mod status_page;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 pub fn note_name(note: u8) -> &'static str {
     match note {
         0..=20 => "",

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 pub(super) mod midi_data;
 
 use midi_msg::Track as MidiTrack;

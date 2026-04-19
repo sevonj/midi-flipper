@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use egui::Color32;
 use egui::Painter;
 use egui::Pos2;

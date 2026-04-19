@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use midi_msg::ChannelVoiceMsg;
 use midi_msg::Meta;
 use midi_msg::MidiMsg;
