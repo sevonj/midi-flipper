@@ -11,4 +11,4 @@ This tool might help if
 - You have a happy ice cream truck jingle, but drive a van that delivers tax forms to adults
 - You just want to listen to garbage
 
-<img width="800" height="600" alt="Screenshot From 2026-04-18 17-34-56" src="https://github.com/user-attachments/assets/d279b6c6-4639-4185-84ea-de67d3911cfd" />
+<img width="1006" height="839" alt="image" src="https://github.com/user-attachments/assets/ef6f9801-383b-461d-a6dc-73178826beeb" />
