@@ -8,7 +8,7 @@ pub struct PaintableNote {
 
 impl PaintableNote {
     pub fn new(note: u8, start: f32, end: f32) -> Self {
-        let y = (127 - note) as f32;
+        let y = (127 - note) as f32 / 128.0;
         Self {
             points: [vec2(start, y), vec2(end, y)],
         }
