@@ -127,10 +127,10 @@ impl TrackMidiData {
             };
 
             let (note, note_on) = match msg {
-                ChannelVoiceMsg::NoteOn { note, .. }
-                | ChannelVoiceMsg::HighResNoteOn { note, .. } => (note, true),
-                ChannelVoiceMsg::NoteOff { note, .. }
-                | ChannelVoiceMsg::HighResNoteOff { note, .. } => (note, false),
+                ChannelVoiceMsg::NoteOn { note, velocity } => (note, velocity > 0),
+                ChannelVoiceMsg::HighResNoteOn { note, velocity } => (note, velocity > 0),
+                ChannelVoiceMsg::NoteOff { note, .. } => (note, false),
+                ChannelVoiceMsg::HighResNoteOff { note, .. } => (note, false),
                 _ => continue,
             };
 
