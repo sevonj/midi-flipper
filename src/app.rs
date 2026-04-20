@@ -16,6 +16,7 @@ use egui::Image;
 use egui::Layout;
 use egui::Ui;
 use egui::Vec2;
+use egui::Visuals;
 use egui::WidgetText;
 use egui_extras::install_image_loaders;
 use egui_toast::Toast;
@@ -70,9 +71,9 @@ impl Default for MidiFlipperApp {
 }
 
 impl MidiFlipperApp {
-    pub fn new(_cc: &CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+    pub fn new(cc: &CreationContext<'_>) -> Self {
+        cc.egui_ctx
+            .global_style_mut(|style| style.visuals = Visuals::dark());
 
         Default::default()
     }
