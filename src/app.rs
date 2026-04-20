@@ -27,7 +27,7 @@ use rfd::FileDialog;
 use crate::MidiFlipperError;
 use crate::app::data::Session;
 use crate::app::widgets::LogView;
-use crate::app::widgets::SessionView;
+use crate::app::widgets::TracksView;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 enum AppTab {
@@ -47,7 +47,7 @@ impl std::fmt::Display for AppTab {
 
 pub struct MidiFlipperApp {
     workdir: Option<PathBuf>,
-    session: Option<Session>,
+    session: Session,
     toasts: Toasts,
     log: VecDeque<String>,
     tab: AppTab,
@@ -59,7 +59,7 @@ impl Default for MidiFlipperApp {
     fn default() -> Self {
         Self {
             workdir: Default::default(),
-            session: Default::default(),
+            session: Session::placeholder(),
             toasts: Default::default(),
             log: Default::default(),
             tab: Default::default(),
@@ -93,24 +93,24 @@ impl MidiFlipperApp {
                 return;
             }
         };
-        self.session = Some(session);
+        self.session = session;
     }
 
     pub fn is_session_open(&self) -> bool {
-        self.session.is_some()
+        !self.session.is_placeholder()
     }
 
     pub fn can_save(&self) -> bool {
-        self.session.is_some()
+        self.is_session_open()
     }
 
     pub fn prompt_save_file(&mut self) {
-        let Some(session) = &self.session else {
+        if !self.can_save() {
             return;
-        };
-        let flipped_midi = session.assemble_flipped_midi();
+        }
+        let flipped_midi = self.session.assemble_flipped_midi();
 
-        let session_name = PathBuf::from(session.name());
+        let session_name = PathBuf::from(self.session.name());
         let stem = session_name
             .file_stem()
             .and_then(|s| s.to_str())
@@ -138,7 +138,7 @@ impl MidiFlipperApp {
             return;
         }
         self.log_text("Closing session".to_string());
-        self.session = None;
+        self.session = Session::placeholder();
     }
 
     fn pick_midi_file(&self) -> Option<PathBuf> {
@@ -204,11 +204,7 @@ impl MidiFlipperApp {
     }
 
     fn tab_session(&mut self, ui: &mut Ui) {
-        let Some(session) = &mut self.session else {
-            ui.add(widgets::StatusPage::status_nothing_open());
-            return;
-        };
-        ui.add(SessionView::new(session));
+        ui.add(TracksView::new(&mut self.session));
     }
 
     fn tab_log(&mut self, ui: &mut Ui) {
@@ -244,7 +240,6 @@ impl App for MidiFlipperApp {
 
         // --- Actual UI
         self.menu_bar(ui);
-        self.tabs_bar(ui);
 
         match self.tab {
             AppTab::Session => self.tab_session(ui),

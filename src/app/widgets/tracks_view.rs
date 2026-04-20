@@ -16,10 +16,12 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::vec2;
 
 use crate::app::data::Session;
+use crate::app::widgets::StatusPage;
 use crate::app::widgets::TrackPreview;
 use crate::app::widgets::TrackView;
 
-const HEIGHT: f32 = 96.0;
+const TOP_HEIGHT: f32 = 24.0;
+const TRACK_HEIGHT: f32 = 96.0;
 
 pub struct TracksView<'a> {
     session: &'a mut Session,
@@ -48,33 +50,42 @@ impl Widget for TracksView<'_> {
                 .unwrap_or(Vec2::splat(0.0))
         });
 
-        Panel::top("tracks_top")
-            .frame(Frame::NONE)
-            .show_inside(ui, |ui| {
-                ui.horizontal(|ui| {
-                    if ui.button("Reset Zoom").clicked() {
-                        zoom = DEFAULT_ZOOM;
-                    }
-                    if ui.button("Reset Position").clicked() {
-                        offset.x = 0.0;
-                    }
-                });
-            });
+        let style = ui.global_style();
+        let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
 
         Panel::left("track_controls")
-            .frame(Frame::NONE)
+            .frame(Frame::NONE.fill(weak_bg_fill))
             .show_inside(ui, |ui| {
+                let item_spacing = ui.style().spacing.item_spacing;
+                ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
+
+                Frame::group(&style)
+                    .inner_margin(0.)
+                    .outer_margin(0.)
+                    .corner_radius(0.)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.set_height(TOP_HEIGHT);
+                            ui.set_width(ui.available_width());
+                            ui.style_mut().spacing.item_spacing = item_spacing;
+
+                            if ui.button("Reset Zoom").clicked() {
+                                zoom = DEFAULT_ZOOM;
+                            }
+                            if ui.button("Reset Position").clicked() {
+                                offset.x = 0.0;
+                            }
+                        });
+                    });
+
                 let scroll_resp = ScrollArea::vertical()
                     .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
                     .scroll_offset(scroll_offset)
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
-                            let item_spacing = ui.style().spacing.item_spacing;
-                            ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
-
                             for (index, track) in self.session.tracks_mut().iter_mut().enumerate() {
                                 ui.scope(|ui| {
-                                    ui.set_height(HEIGHT);
+                                    ui.set_height(TRACK_HEIGHT);
                                     ui.style_mut().spacing.item_spacing = item_spacing;
                                     ui.add(TrackView::new(index, track));
                                 });
@@ -85,6 +96,10 @@ impl Widget for TracksView<'_> {
                 scroll_resp.inner
             });
 
+        if self.session.is_placeholder() {
+            return ui.add(StatusPage::status_nothing_open());
+        }
+
         let response = CentralPanel::default()
             .frame(Frame::NONE)
             .show_inside(ui, |ui| {
@@ -94,24 +109,33 @@ impl Widget for TracksView<'_> {
 
                 let col_major = Color32::from_hex("#7777").unwrap();
                 let col_minor = Color32::from_hex("#7773").unwrap();
-                let stroke_major = Stroke::new(2., col_major);
+                let stroke_major = Stroke::new(1., col_major);
                 let stroke_minor = Stroke::new(1., col_minor);
 
-                let clip_rect = ui.available_rect_before_wrap();
-                let mult = vec2(zoom, ui.available_height());
+                let tracks_clip_rect = {
+                    let rect = ui.available_rect_before_wrap();
+                    rect.with_min_y(rect.min.y + TOP_HEIGHT)
+                };
+                let tracks_painter =
+                    Painter::new(ui.ctx().clone(), ui.layer_id(), tracks_clip_rect);
+                let tracks_scale = vec2(zoom, TRACK_HEIGHT);
+                let tracks_position = tracks_clip_rect.min - scroll_offset;
+                let tracks_area_size = tracks_clip_rect.size();
 
-                let painter = Painter::new(ui.ctx().clone(), ui.layer_id(), clip_rect);
+                let meter_clip_rect = {
+                    let rect = ui.available_rect_before_wrap();
+                    rect.with_max_y(rect.min.y + TOP_HEIGHT)
+                };
+                let meter_painter = Painter::new(ui.ctx().clone(), ui.layer_id(), meter_clip_rect);
 
-                let scale = vec2(zoom, HEIGHT);
-                let position = clip_rect.min - scroll_offset;
-
-                // Striped track bg
+                // Tracks stripe BG
                 for i in 0..self.session.tracks().len() {
-                    let min = position + vec2(0.0, i as f32 * scale.y);
-                    let max = position + vec2(ui.available_width(), (i + 1) as f32 * scale.y);
+                    let min = tracks_position + vec2(0.0, i as f32 * tracks_scale.y);
+                    let max = tracks_position
+                        + vec2(ui.available_width(), (i + 1) as f32 * tracks_scale.y);
 
                     if i % 2 == 1 {
-                        painter.rect(
+                        tracks_painter.rect(
                             Rect::from_min_max(min, max),
                             0.0,
                             faint_bg_color,
@@ -121,18 +145,40 @@ impl Widget for TracksView<'_> {
                     }
                 }
 
-                // Bar lines
-                for bar in self.session.beats_paint_cache() {
-                    let a = clip_rect.min + (bar.0[0] - offset) * mult;
-                    let b = clip_rect.min + (bar.0[1] - offset) * mult;
-                    painter.line(vec![a, b], if bar.1 { stroke_major } else { stroke_minor });
+                // Tracks Bar lines
+                {
+                    let bar_scale = vec2(zoom, tracks_area_size.y);
+                    for bar in self.session.beats_paint_cache() {
+                        let a = tracks_clip_rect.min + (bar.0[0] - offset) * bar_scale;
+                        let b = tracks_clip_rect.min + (bar.0[1] - offset) * bar_scale;
+                        tracks_painter
+                            .line(vec![a, b], if bar.1 { stroke_major } else { stroke_minor });
+                    }
                 }
 
-                // Events
+                // Tracks
+                for (index, track) in self.session.tracks_mut().iter_mut().enumerate() {
+                    let track_row_offset = vec2(0.0, index as f32 * tracks_scale.y);
+                    let position = tracks_position - offset * tracks_scale + track_row_offset;
+
+                    ui.add(TrackPreview::new(
+                        index,
+                        track,
+                        position,
+                        tracks_scale,
+                        tracks_clip_rect,
+                    ));
+                }
+
+                // Meter Fill
+                meter_painter.rect_filled(meter_clip_rect, 0.0, faint_bg_color);
+
+                // Meter Events
                 for (time, event) in self.session.marker_events() {
                     const ANCHOR: Align2 = Align2::LEFT_TOP;
-                    let pos = position - offset * scale + vec2(*time as f32, 0.0) * scale;
-                    let font_id = FontId::monospace(8.0);
+                    let pos = meter_clip_rect.min - offset * tracks_scale
+                        + vec2(*time as f32, 0.0) * tracks_scale;
+                    let font_id = FontId::monospace(10.0);
                     match event {
                         midi_msg::Meta::Marker(_) => (),
                         midi_msg::Meta::CuePoint(_) => (),
@@ -140,22 +186,20 @@ impl Widget for TracksView<'_> {
                         midi_msg::Meta::SetTempo(tempo) => {
                             let bpm = 60_000_000 / tempo;
                             let text = format!("{bpm}bpm");
-                            painter.text(pos + vec2(0.0, 8.0), ANCHOR, text, font_id, col_major);
+                            meter_painter.text(
+                                pos + vec2(0.0, 12.0),
+                                ANCHOR,
+                                text,
+                                font_id,
+                                col_major,
+                            );
                         }
                         midi_msg::Meta::TimeSignature(ts) => {
                             let text = format!("{}/{}", ts.numerator, ts.denominator);
-                            painter.text(pos, ANCHOR, text, font_id, col_major);
+                            meter_painter.text(pos, ANCHOR, text, font_id, col_major);
                         }
                         _ => continue,
                     }
-                }
-
-                // Tracks
-                for (index, track) in self.session.tracks_mut().iter_mut().enumerate() {
-                    let track_row_offset = vec2(0.0, index as f32 * scale.y);
-                    let position = position - offset * scale + track_row_offset;
-
-                    ui.add(TrackPreview::new(index, track, position, scale, clip_rect));
                 }
             })
             .response;
@@ -195,7 +239,9 @@ impl Widget for TracksView<'_> {
                 }
                 offset.x = offset.x.clamp(0.0, length);
                 let num_tracks = self.session.tracks().len();
-                let scroll_max = (num_tracks as f32 * HEIGHT - response.rect.height()).max(0.0);
+                let scroll_max = (TOP_HEIGHT + num_tracks as f32 * TRACK_HEIGHT
+                    - response.rect.height())
+                .max(0.0);
                 scroll_offset.y = scroll_offset.y.clamp(0.0, scroll_max);
             }
         }

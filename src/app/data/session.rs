@@ -24,6 +24,7 @@ pub struct Session {
 
     center_note: u8,
     flip_bend: bool,
+    is_placeholder: bool,
 }
 
 impl Session {
@@ -55,6 +56,7 @@ impl Session {
             beats_paint_cache: vec![],
             center_note,
             flip_bend,
+            is_placeholder: false,
         };
         this.generate_bg_paint_cache();
 
@@ -71,6 +73,24 @@ impl Session {
         let midi_file = MidiFile::from_midi(&bytes)?;
 
         Self::new(name, midi_file)
+    }
+
+    pub fn placeholder() -> Self {
+        Self {
+            name: String::from("No File"),
+            length: 0.0,
+            midi_header: midi_msg::Header::default(),
+            tracks: vec![],
+            marker_events: vec![],
+            beats_paint_cache: vec![],
+            center_note: MIDDLE_C,
+            flip_bend: false,
+            is_placeholder: true,
+        }
+    }
+
+    pub fn is_placeholder(&self) -> bool {
+        self.is_placeholder
     }
 
     pub fn name(&self) -> &str {
