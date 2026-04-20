@@ -101,6 +101,10 @@ impl Session {
         self.length
     }
 
+    pub fn midi_header(&self) -> &midi_msg::Header {
+        &self.midi_header
+    }
+
     pub fn tracks(&self) -> &[SessionTrack] {
         &self.tracks
     }

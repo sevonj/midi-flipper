@@ -38,11 +38,17 @@ impl Widget for TracksView<'_> {
         let length = self.session.length();
 
         let state_id = ui.id().with("zoom");
-        const DEFAULT_ZOOM: f32 = 1.0;
+        const DEFAULT_ZOOM: f32 = 8.0;
         let (mut zoom, mut offset) = ui.data_mut(|d| {
             d.get_temp::<(f32, Vec2)>(state_id)
                 .unwrap_or((DEFAULT_ZOOM, Vec2::splat(0.0)))
         });
+        let midi_time_scale = match &self.session.midi_header().division {
+            midi_msg::Division::TicksPerQuarterNote(ticks) => *ticks as f32,
+            midi_msg::Division::TimeCode {
+                ticks_per_frame, ..
+            } => *ticks_per_frame as f32,
+        };
 
         let scroll_offset_id = ui.id().with("scroll_offset");
         let mut scroll_offset = ui.data_mut(|d| {
@@ -97,6 +103,8 @@ impl Widget for TracksView<'_> {
             });
 
         if self.session.is_placeholder() {
+            ui.data_mut(|d| d.insert_temp(state_id, (DEFAULT_ZOOM, Vec2::splat(0.0))));
+            ui.data_mut(|d| d.insert_temp(scroll_offset_id, Vec2::splat(0.0)));
             return ui.add(StatusPage::status_nothing_open());
         }
 
@@ -118,7 +126,8 @@ impl Widget for TracksView<'_> {
                 };
                 let tracks_painter =
                     Painter::new(ui.ctx().clone(), ui.layer_id(), tracks_clip_rect);
-                let tracks_scale = vec2(zoom, TRACK_HEIGHT);
+                let view_time_scale = zoom / midi_time_scale;
+                let tracks_scale = vec2(view_time_scale, TRACK_HEIGHT);
                 let tracks_position = tracks_clip_rect.min - scroll_offset;
                 let tracks_area_size = tracks_clip_rect.size();
 
@@ -147,7 +156,7 @@ impl Widget for TracksView<'_> {
 
                 // Tracks Bar lines
                 {
-                    let bar_scale = vec2(zoom, tracks_area_size.y);
+                    let bar_scale = vec2(view_time_scale, tracks_area_size.y);
                     for bar in self.session.beats_paint_cache() {
                         let a = tracks_clip_rect.min + (bar.0[0] - offset) * bar_scale;
                         let b = tracks_clip_rect.min + (bar.0[1] - offset) * bar_scale;
@@ -235,7 +244,7 @@ impl Widget for TracksView<'_> {
                         ui.input(|ui| ui.pointer.hover_pos().unwrap()) - response.rect.min;
                     offset.x -= delta_len * relative_cursor_pos.x / response.rect.width();
                 } else if modifiers.alt {
-                    offset.x -= delta / zoom * 50.;
+                    offset.x -= delta / zoom * midi_time_scale * 50.;
                 }
                 offset.x = offset.x.clamp(0.0, length);
                 let num_tracks = self.session.tracks().len();
