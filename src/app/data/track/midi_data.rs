@@ -127,6 +127,7 @@ impl TrackMidiData {
             };
 
             let (note, note_on) = match msg {
+                // Zero-vel NoteOn is considered a NoteOff
                 ChannelVoiceMsg::NoteOn { note, velocity } => (note, velocity > 0),
                 ChannelVoiceMsg::HighResNoteOn { note, velocity } => (note, velocity > 0),
                 ChannelVoiceMsg::NoteOff { note, .. } => (note, false),
@@ -139,7 +140,9 @@ impl TrackMidiData {
             }
 
             if note_on {
-                open_notes[note as usize] = Some(time);
+                if open_notes[note as usize].is_none() {
+                    open_notes[note as usize] = Some(time);
+                }
             } else {
                 // note_off
                 let Some(start) = open_notes[note as usize].take() else {
