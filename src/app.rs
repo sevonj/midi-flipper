@@ -232,7 +232,7 @@ impl App for MidiFlipperApp {
         }
         if !self.splash_done {
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
-            ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(800.0, 600.0)));
+            ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(1200.0, 800.0)));
             self.splash_done = true;
         }
 
@@ -246,5 +246,9 @@ impl App for MidiFlipperApp {
 
         self.consume_shortcuts(ui);
         self.toasts.show(ui);
+        self.session.check_for_changes();
+        if self.session.is_playing() {
+            ui.request_repaint();
+        }
     }
 }

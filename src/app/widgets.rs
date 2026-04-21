@@ -2,6 +2,7 @@
 
 mod global_controls;
 mod log_view;
+mod playback_controls;
 mod status_page;
 mod tab;
 mod track_preview;
@@ -10,6 +11,7 @@ mod tracks_view;
 
 pub use global_controls::GlobalControls;
 pub use log_view::LogView;
+pub use playback_controls::PlaybackControls;
 pub use status_page::StatusPage;
 pub use tab::Tab;
 pub use track_preview::TrackPreview;

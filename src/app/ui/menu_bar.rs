@@ -15,12 +15,14 @@ use crate::app::shortcuts::SHORTCUT_FILE_OPEN;
 use crate::app::shortcuts::SHORTCUT_FILE_SAVE;
 use crate::app::shortcuts::SHORTCUT_QUIT;
 use crate::app::widgets::GlobalControls;
+use crate::app::widgets::PlaybackControls;
 use crate::app::widgets::Tab;
 
 impl MidiFlipperApp {
     pub(crate) fn menu_bar(&mut self, ui: &mut Ui) -> egui::Response {
         Panel::top("menu_bar")
             .resizable(false)
+            .exact_size(48.0)
             .show_separator_line(false)
             .frame(
                 Frame::default()
@@ -28,6 +30,8 @@ impl MidiFlipperApp {
                     .fill(Color32::from_hex("#525252").unwrap()),
             )
             .show_inside(ui, |ui| {
+                ui.set_height(ui.available_height());
+
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         self.file_menu(ui);
@@ -52,11 +56,11 @@ impl MidiFlipperApp {
 
                     ui.separator();
 
-                    ui.add(GlobalControls::new(&mut self.session));
+                    ui.add(PlaybackControls::new(&mut self.session));
 
                     ui.separator();
 
-                    ui.label(self.session.name());
+                    ui.add(GlobalControls::new(&mut self.session));
                 });
             })
             .response

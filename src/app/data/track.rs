@@ -16,6 +16,8 @@ pub struct SessionTrack {
     track_flipped: TrackMidiData,
 
     settings: FlipSettings,
+
+    changed: bool,
 }
 
 impl SessionTrack {
@@ -37,7 +39,14 @@ impl SessionTrack {
             track_original,
             track_flipped,
             settings,
+            changed: false,
         }
+    }
+
+    pub(super) fn clear_changed(&mut self) -> bool {
+        let changed = self.changed;
+        self.changed = false;
+        changed
     }
 
     pub fn name(&self) -> Option<&str> {
@@ -99,5 +108,6 @@ impl SessionTrack {
 
     fn reflip(&mut self) {
         self.track_flipped = self.track_original.clone().flipped(&self.settings);
+        self.changed = true;
     }
 }
