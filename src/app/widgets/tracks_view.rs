@@ -30,7 +30,7 @@ use crate::app::widgets::TrackView;
 const DEFAULT_ZOOM: f32 = 8.0;
 const TOP_HEIGHT: f32 = 24.0;
 const MIN_TRACK_HEIGHT: f32 = 96.0;
-const MAX_TRACK_HEIGHT: f32 = MIN_TRACK_HEIGHT * 4.0;
+const MAX_TRACK_HEIGHT: f32 = 128.0 * 8.0;
 
 #[derive(Debug, Clone)]
 struct ViewPortState {

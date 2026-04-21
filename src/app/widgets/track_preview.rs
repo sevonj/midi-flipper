@@ -46,27 +46,28 @@ impl Widget for TrackPreview<'_> {
         let index = self.index;
         let color_note = track_color(index);
         let color_note_disabled = Color32::from_hex("#7777").unwrap();
-        let stroke_note = Stroke::new(2.0, color_note);
-        let stroke_note_disabled = Stroke::new(2.0, color_note_disabled);
+        let stroke_width = (self.paint_scale.y / 128.0).max(2.0).round();
+        let stroke_note = Stroke::new(stroke_width, color_note);
+        let stroke_note_disabled = Stroke::new(stroke_width, color_note_disabled);
 
         let painter = Painter::new(ui.ctx().clone(), ui.layer_id(), self.clip_rect);
         if self.track.flip_enabled() {
             for note in self.track.track_original().paint_cache() {
                 let a = self.paint_position + note.points()[0] * self.paint_scale;
                 let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a, b], stroke_note_disabled);
+                painter.line(vec![a.round(), b.round()], stroke_note_disabled);
             }
 
             for note in self.track.track_flipped().paint_cache() {
                 let a = self.paint_position + note.points()[0] * self.paint_scale;
                 let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a, b], stroke_note);
+                painter.line(vec![a.round(), b.round()], stroke_note);
             }
         } else {
             for note in self.track.track_original().paint_cache() {
                 let a = self.paint_position + note.points()[0] * self.paint_scale;
                 let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a, b], stroke_note);
+                painter.line(vec![a.round(), b.round()], stroke_note);
             }
         }
 
