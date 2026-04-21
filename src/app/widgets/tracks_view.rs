@@ -20,9 +20,10 @@ use crate::app::widgets::StatusPage;
 use crate::app::widgets::TrackPreview;
 use crate::app::widgets::TrackView;
 
-const TOP_HEIGHT: f32 = 24.0;
-const TRACK_HEIGHT: f32 = 96.0;
 const DEFAULT_ZOOM: f32 = 8.0;
+const TOP_HEIGHT: f32 = 24.0;
+const MIN_TRACK_HEIGHT: f32 = 96.0;
+const MAX_TRACK_HEIGHT: f32 = MIN_TRACK_HEIGHT * 4.0;
 
 #[derive(Debug, Clone)]
 struct ViewPortState {
@@ -38,7 +39,7 @@ impl Default for ViewPortState {
             time_zoom: DEFAULT_ZOOM,
             time_off: 0.0,
             scroll_off: 0.0,
-            track_height: TRACK_HEIGHT,
+            track_height: MIN_TRACK_HEIGHT,
         }
     }
 }
@@ -52,28 +53,40 @@ impl ViewPortState {
         time_scale: f32,
     ) {
         let old_zoom = self.time_zoom;
-        let mut new_zoom = old_zoom;
+
         if delta > 0.0 {
-            new_zoom *= 1.0 + delta * 0.2;
+            self.time_zoom *= 1.0 + delta * 0.2;
         } else {
-            new_zoom /= 1.0 - delta * 0.2;
+            self.time_zoom /= 1.0 - delta * 0.2;
         }
-        self.time_zoom = new_zoom;
+
         let old_len = rect.width() / old_zoom;
-        let new_len = rect.width() / new_zoom;
+        let new_len = rect.width() / self.time_zoom;
         let delta_len = (new_len - old_len) * time_scale;
         self.time_off -= delta_len * relative_cursor_pos.x / rect.width();
     }
 
-    pub fn vertical_zoom(&mut self, delta: f32, num_tracks: usize) {
+    pub fn vertical_zoom(
+        &mut self,
+        delta: f32,
+        rect: Rect,
+        num_tracks: usize,
+        relative_cursor_pos: Vec2,
+    ) {
         let old_height = TOP_HEIGHT + num_tracks as f32 * self.track_height;
+
         if delta > 0.0 {
             self.track_height *= 1.0 + delta * 0.1;
         } else {
             self.track_height /= 1.0 - delta * 0.1;
         }
+        self.track_height = self.track_height.clamp(MIN_TRACK_HEIGHT, MAX_TRACK_HEIGHT);
+
         let new_height = TOP_HEIGHT + num_tracks as f32 * self.track_height;
         self.scroll_off *= new_height / old_height;
+        self.scroll_off += (rect.height() * new_height / old_height - rect.height())
+            * relative_cursor_pos.y
+            / rect.height();
     }
 }
 
@@ -273,13 +286,19 @@ impl Widget for TracksView<'_> {
                 let relative_cursor_pos = ui.input(|ui| ui.pointer.hover_pos().unwrap()) - rect.min;
 
                 if modifiers.is_none() {
+                    // Scroll vertically
                     state.scroll_off -= delta * 50.0;
-                } else if modifiers.shift_only() {
-                    state.vertical_zoom(delta, num_tracks);
-                } else if modifiers.ctrl {
-                    state.horizontal_zoom(delta, rect, relative_cursor_pos, midi_time_scale);
                 } else if modifiers.alt {
+                    // Scroll horizontally
                     state.time_off -= delta / state.time_zoom * midi_time_scale * 50.;
+                } else {
+                    // Zoom
+                    if modifiers.shift {
+                        state.vertical_zoom(delta, rect, num_tracks, relative_cursor_pos);
+                    }
+                    if modifiers.ctrl {
+                        state.horizontal_zoom(delta, rect, relative_cursor_pos, midi_time_scale);
+                    }
                 }
 
                 state.time_off = state.time_off.clamp(0.0, length);
