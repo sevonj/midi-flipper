@@ -12,7 +12,7 @@ This tool might help if
 - You have a happy ice cream truck jingle, but drive a van that delivers tax notices to depressed adults
 - You just enjoy listening to garbage
 
-<img width="1161" height="916" alt="image" src="https://github.com/user-attachments/assets/8f0f2a08-9723-4534-8e92-007d6f892788" />
+<img width="1062" height="828" alt="image" src="https://github.com/user-attachments/assets/54896a0c-27da-48eb-9f36-797cde0371f6" />
 
 ## Examples
 
