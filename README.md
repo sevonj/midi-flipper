@@ -13,3 +13,15 @@ This tool might help if
 - You just enjoy listening to garbage
 
 <img width="1161" height="916" alt="image" src="https://github.com/user-attachments/assets/8f0f2a08-9723-4534-8e92-007d6f892788" />
+
+## Example
+
+https://youtu.be/-_yv-oOx62I
+
+## Download
+
+Go to [releases](https://github.com/sevonj/midi-flipper/releases) and grab the latest one.
+
+Builds exist for Linux and Windows
+
+(x86_64 only)
