@@ -92,8 +92,8 @@ impl TrackMidiData {
                 _ => continue,
             };
 
-            let center_note = settings.global_center as i32 + settings.transpose;
-            let mut mapped = center_note + (center_note - *note as i32);
+            let mut mapped = 127 - *note as i32;
+            mapped += settings.global_transpose + settings.transpose;
 
             while mapped > 127 {
                 mapped -= 12;

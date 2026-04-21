@@ -3,17 +3,17 @@
 #[derive(Debug, Clone)]
 pub struct FlipSettings {
     pub enabled: bool,
-    pub global_center: u8,
+    pub global_transpose: i32,
     pub global_flip_bend: bool,
     pub transpose: i32,
     pub ignore_ch10: bool,
 }
 
 impl FlipSettings {
-    pub fn new(global_center: u8, global_flip_bend: bool) -> Self {
+    pub fn new(global_transpose: i32, global_flip_bend: bool) -> Self {
         Self {
             enabled: true,
-            global_center,
+            global_transpose,
             global_flip_bend,
             transpose: 0,
             ignore_ch10: true,

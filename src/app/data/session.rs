@@ -11,8 +11,6 @@ use midi_msg::MidiFile;
 use crate::MidiFlipperError;
 use crate::app::data::SessionTrack;
 
-const MIDDLE_C: u8 = 60;
-
 #[derive(Debug)]
 pub struct Session {
     name: String,
@@ -22,7 +20,7 @@ pub struct Session {
     marker_events: Vec<(f64, Meta)>,
     beats_paint_cache: Vec<([Vec2; 2], bool)>,
 
-    center_note: u8,
+    global_transpose: i32,
     flip_bend: bool,
     is_placeholder: bool,
 }
@@ -34,13 +32,13 @@ impl Session {
             return Err(MidiFlipperError::MidiValidationFailed);
         }
 
-        let center_note = MIDDLE_C;
+        let global_transpose = 0;
         let flip_bend = false;
 
         let mut tracks = Vec::with_capacity(midi_file.tracks.len());
         let mut length = 0.0;
         for track in midi_file.tracks {
-            let session_track = SessionTrack::from_track(track, center_note, flip_bend);
+            let session_track = SessionTrack::from_track(track, global_transpose, flip_bend);
             if session_track.length() > length {
                 length = session_track.length();
             }
@@ -54,7 +52,7 @@ impl Session {
             tracks,
             marker_events: vec![],
             beats_paint_cache: vec![],
-            center_note,
+            global_transpose,
             flip_bend,
             is_placeholder: false,
         };
@@ -83,7 +81,7 @@ impl Session {
             tracks: vec![],
             marker_events: vec![],
             beats_paint_cache: vec![],
-            center_note: MIDDLE_C,
+            global_transpose: 0,
             flip_bend: false,
             is_placeholder: true,
         }
@@ -121,19 +119,19 @@ impl Session {
         &self.marker_events
     }
 
-    pub fn center_note(&self) -> u8 {
-        self.center_note
+    pub fn global_transpose(&self) -> i32 {
+        self.global_transpose
     }
 
-    pub fn set_center_note(&mut self, center_note: u8) {
-        self.center_note = center_note;
+    pub fn set_global_transpose(&mut self, global_transpose: i32) {
+        self.global_transpose = global_transpose;
         for track in &mut self.tracks {
-            track.set_center_note(center_note);
+            track.set_global_transpose(global_transpose);
         }
     }
 
-    pub fn reset_center_note(&mut self) {
-        self.set_center_note(MIDDLE_C);
+    pub fn reset_global_transpose(&mut self) {
+        self.set_global_transpose(0);
     }
 
     pub fn flip_bend(&self) -> bool {

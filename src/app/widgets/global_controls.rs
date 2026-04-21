@@ -4,7 +4,6 @@ use egui::Slider;
 use egui::Widget;
 
 use crate::app::data::Session;
-use crate::util;
 
 pub struct GlobalControls<'a> {
     session: &'a mut Session,
@@ -32,18 +31,15 @@ impl Widget for GlobalControls<'_> {
             }
 
             ui.horizontal(|ui| {
-                let mut center_note = self.session.center_note();
+                let mut global_transpose = self.session.global_transpose();
                 if ui
-                    .add(
-                        Slider::new(&mut center_note, 21..=127)
-                            .custom_formatter(|v, _| util::note_name(v as u8).to_string()),
-                    )
+                    .add(Slider::new(&mut global_transpose, -127..=127))
                     .changed()
                 {
-                    self.session.set_center_note(center_note);
+                    self.session.set_global_transpose(global_transpose);
                 }
                 if ui.button("Reset").clicked() {
-                    self.session.reset_center_note();
+                    self.session.reset_global_transpose();
                 }
             });
 
