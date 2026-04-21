@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use egui::Checkbox;
+use egui::Button;
 use egui::Frame;
 use egui::Label;
 use egui::RichText;
+use egui::Vec2;
 use egui::Widget;
 
 use crate::app::data::SessionTrack;
+
+const BUTTON_MIN_SIZE: Vec2 = Vec2::splat(20.0);
 
 pub struct TrackView<'a> {
     index: usize,
@@ -45,26 +48,40 @@ impl Widget for TrackView<'_> {
                     ui.separator();
 
                     ui.vertical(|ui| {
-                        ui.style_mut().spacing.item_spacing.y = 1.0;
+                        ui.spacing_mut().item_spacing = Vec2::splat(1.0);
+                        ui.add_space(2.0);
+
+                        ui.add(
+                            Label::new(track_name(self.track))
+                                .wrap_mode(egui::TextWrapMode::Truncate),
+                        );
 
                         ui.horizontal(|ui| {
-                            let mut flip_enabled = self.track.flip_enabled();
-                            if ui.add(Checkbox::new(&mut flip_enabled, "")).changed() {
-                                self.track.set_flip_enabled(flip_enabled);
+                            let flip_enabled = self.track.flip_enabled();
+                            if toggle_button(ui, flip_enabled, "F", "Flip Track").clicked() {
+                                self.track.set_flip_enabled(!flip_enabled);
                             }
-                            ui.add(
-                                Label::new(track_name(self.track))
-                                    .wrap_mode(egui::TextWrapMode::Truncate),
-                            )
-                            .on_hover_text("Flip me?");
+                            let ignore_ch10 = self.track.ignore_ch10();
+                            if toggle_button(ui, !ignore_ch10, "Ch10", "Flip Channel 10  (drums)")
+                                .clicked()
+                            {
+                                self.track.set_ignore_ch10(!ignore_ch10);
+                            }
                         });
 
                         ui.separator();
 
-                        ui.vertical(|ui| {
+                        ui.horizontal(|ui| {
                             let mut transposition = self.track.transposition();
 
                             ui.horizontal(|ui| {
+                                ui.set_width(54.0);
+
+                                if button(ui, "R", "Reset Transposition").clicked() {
+                                    transposition = 0;
+                                    self.track.set_transposition(transposition);
+                                }
+
                                 let sign = if transposition > 0 { "+" } else { "" };
                                 let octaves = transposition / 12;
                                 let oct_string = if octaves != 0 {
@@ -72,58 +89,47 @@ impl Widget for TrackView<'_> {
                                 } else {
                                     String::new()
                                 };
-                                let semitones = transposition % 12;
-                                ui.label(format!("Transposition: {sign}{oct_string}{semitones}"));
+                                let semitones = transposition.abs() % 12;
+                                ui.label(format!("{sign}{oct_string}{semitones}"))
+                                    .on_hover_text("Transposition");
                             });
 
                             ui.horizontal(|ui| {
-                                ui.style_mut().spacing.item_spacing.x = 1.0;
-
-                                if ui.button("Reset").clicked() {
-                                    transposition = 0;
-                                    self.track.set_transposition(transposition);
-                                }
-
-                                ui.add_space(3.0);
-
-                                if ui.button("+1").clicked() {
+                                if button(ui, "+1", "Semitone Up").clicked() {
                                     transposition += 1;
                                     self.track.set_transposition(transposition);
                                 }
-                                if ui.button("-1").clicked() {
+                                if button(ui, "-1", "Semitone Down").clicked() {
                                     transposition -= 1;
                                     self.track.set_transposition(transposition);
                                 }
-
-                                ui.add_space(3.0);
-
-                                if ui.button("+Oct").clicked() {
+                                if button(ui, "+Oct", "Octave Up").clicked() {
                                     transposition += 12;
                                     self.track.set_transposition(transposition);
                                 }
-                                if ui.button("-Oct").clicked() {
+                                if button(ui, "-Oct", "Octave Down").clicked() {
                                     transposition -= 12;
                                     self.track.set_transposition(transposition);
                                 }
-
-                                ui.add_space(8.0);
                             });
+
+                            ui.add_space(4.0);
                         });
-
-                        ui.separator();
-
-                        let mut ignore_ch10 = self.track.ignore_ch10();
-                        if ui
-                            .checkbox(&mut ignore_ch10, "Skip ch.10 (drums)")
-                            .changed()
-                        {
-                            self.track.set_ignore_ch10(ignore_ch10);
-                        }
                     });
                 })
             })
             .response
     }
+}
+
+fn toggle_button(ui: &mut egui::Ui, selected: bool, label: &str, tooltip: &str) -> egui::Response {
+    ui.add(Button::selectable(selected, label).min_size(BUTTON_MIN_SIZE))
+        .on_hover_text(tooltip)
+}
+
+fn button(ui: &mut egui::Ui, label: &str, tooltip: &str) -> egui::Response {
+    ui.add(Button::new(label).min_size(BUTTON_MIN_SIZE))
+        .on_hover_text(tooltip)
 }
 
 fn track_name(track: &mut SessionTrack) -> RichText {
