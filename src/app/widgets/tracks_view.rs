@@ -299,7 +299,10 @@ impl Widget for TracksView<'_> {
                                 let b = tracks_clip_rect.min
                                     + (bar.0[1] - viewport_time_off) * bar_scale;
                                 tracks_painter.line(
-                                    vec![a, b],
+                                    vec![
+                                        a.round() - Vec2::splat(0.5),
+                                        b.round() - Vec2::splat(0.5),
+                                    ],
                                     if bar.1 { stroke_major } else { stroke_minor },
                                 );
                             }
