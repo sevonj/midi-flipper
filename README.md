@@ -16,9 +16,9 @@ This tool might help if
 
 - You want to experiment with [mirror scales](https://music.stackexchange.com/questions/51131/do-all-modes-make-another-mode-when-mirrored-i-e-intervals-reversed/51140)
 - [Your music doesn't sound serious enough](https://web.archive.org/web/20210725090647/https://old.reddit.com/r/musicproduction/comments/oqzsa7/how_do_you_make_a_melody_more_serious_sounding/)
-- Your music sounds too serious and you'd rather listen to royalty free youtube music
+- Your music sounds too serious
 - You have a happy ice cream truck jingle, but drive a van that delivers tax notices to depressed adults
-- You just enjoy listening to garbage
+- You just enjoy the sound of royalty free youtube music
 
 ![screenshot](assets/screenshots/screenshot.png)
 
