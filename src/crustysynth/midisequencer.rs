@@ -93,10 +93,10 @@ impl MidiSequencer {
                 MidiMsg::ChannelVoice { .. }
                 | MidiMsg::RunningChannelVoice { .. }
                 | MidiMsg::ChannelMode { .. }
-                | MidiMsg::RunningChannelMode { .. } => {
-                    if event_sink.receive_midi(&wrap.track_event.event).is_err() {
-                        println!("Unhandled: {wrap}");
-                    }
+                | MidiMsg::RunningChannelMode { .. }
+                    if event_sink.receive_midi(&wrap.track_event.event).is_err() =>
+                {
+                    println!("Unhandled: {wrap}");
                 }
 
                 midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
@@ -230,7 +230,6 @@ impl MidiSequencer {
                         as usize;
                     if tick >= event_tick {
                         track_positions[i] += 1;
-                        #[allow(clippy::collapsible_match)]
                         if let MidiMsg::Meta { msg } = &event.event
                             && let Meta::SetTempo(tempo) = msg
                         {
