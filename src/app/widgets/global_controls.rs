@@ -17,34 +17,34 @@ impl<'a> GlobalControls<'a> {
 
 impl Widget for GlobalControls<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.vertical(|ui| {
-            if self.session.is_placeholder() {
-                ui.disable();
-            }
+        if self.session.is_placeholder() {
+            ui.disable();
+        }
 
-            let mut flip_pitch_bend = self.session.flip_bend();
+        ui.horizontal(|ui| {
+            let mut global_transpose = self.session.global_transpose();
             if ui
-                .checkbox(&mut flip_pitch_bend, "Flip pitch bend")
+                .add(Slider::new(&mut global_transpose, -127..=127).smart_aim(false))
+                .on_hover_text("Global Transposition")
                 .changed()
             {
-                self.session.set_flip_bend(flip_pitch_bend);
+                self.session.set_global_transpose(global_transpose);
             }
+            if ui.button("Reset").clicked() {
+                self.session.reset_global_transpose();
+            }
+        });
 
-            ui.horizontal(|ui| {
-                let mut global_transpose = self.session.global_transpose();
-                if ui
-                    .add(Slider::new(&mut global_transpose, -127..=127))
-                    .changed()
-                {
-                    self.session.set_global_transpose(global_transpose);
-                }
-                if ui.button("Reset").clicked() {
-                    self.session.reset_global_transpose();
-                }
-            });
+        let mut flip_pitch_bend = self.session.flip_bend();
+        if ui
+            .checkbox(&mut flip_pitch_bend, "Flip pitch bend")
+            .changed()
+        {
+            self.session.set_flip_bend(flip_pitch_bend);
+        }
 
-            ui.add_space(4.);
-        })
-        .response
+        ui.add_space(4.);
+
+        ui.response()
     }
 }
