@@ -16,6 +16,7 @@ pub struct TrackPreview<'a> {
     paint_position: Pos2,
     paint_scale: Vec2,
     clip_rect: Rect,
+    playing_original: bool,
 }
 
 impl<'a> TrackPreview<'a> {
@@ -25,6 +26,7 @@ impl<'a> TrackPreview<'a> {
         paint_position: Pos2,
         paint_scale: Vec2,
         clip_rect: Rect,
+        playing_original: bool,
     ) -> Self {
         Self {
             index,
@@ -32,6 +34,7 @@ impl<'a> TrackPreview<'a> {
             paint_position,
             paint_scale,
             clip_rect,
+            playing_original,
         }
     }
 }
@@ -52,16 +55,22 @@ impl Widget for TrackPreview<'_> {
 
         let painter = Painter::new(ui.ctx().clone(), ui.layer_id(), self.clip_rect);
         if self.track.flip_enabled() {
+            let (stroke_og, stroke_flip) = if self.playing_original {
+                (stroke_note, stroke_note_disabled)
+            } else {
+                (stroke_note_disabled, stroke_note)
+            };
+
             for note in self.track.track_original().paint_cache() {
                 let a = self.paint_position + note.points()[0] * self.paint_scale;
                 let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a.round(), b.round()], stroke_note_disabled);
+                painter.line(vec![a.round(), b.round()], stroke_og);
             }
 
             for note in self.track.track_flipped().paint_cache() {
                 let a = self.paint_position + note.points()[0] * self.paint_scale;
                 let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a.round(), b.round()], stroke_note);
+                painter.line(vec![a.round(), b.round()], stroke_flip);
             }
         } else {
             for note in self.track.track_original().paint_cache() {

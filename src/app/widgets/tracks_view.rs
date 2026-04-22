@@ -310,6 +310,7 @@ impl Widget for TracksView<'_> {
                         }
 
                         // Tracks
+                        let playing_original = self.session.playback_original();
                         for (index, track) in self.session.tracks_mut().iter_mut().enumerate() {
                             let track_row_offset = vec2(0.0, index as f32 * tracks_scale.y);
                             let position = tracks_position - viewport_time_off * tracks_scale
@@ -321,6 +322,7 @@ impl Widget for TracksView<'_> {
                                 position,
                                 tracks_scale,
                                 tracks_clip_rect,
+                                playing_original,
                             ));
                         }
 
