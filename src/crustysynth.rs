@@ -150,6 +150,12 @@ impl CrustySynth {
             player.stop();
         }
     }
+
+    pub fn seek_to(&mut self, time: f32) {
+        if let Some(player) = &mut self.player {
+            let _ = player.try_seek(Duration::from_secs_f32(time));
+        }
+    }
 }
 
 fn default_soundfont() -> Arc<SoundFont> {

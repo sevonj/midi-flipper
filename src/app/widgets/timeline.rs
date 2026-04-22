@@ -9,7 +9,9 @@ use egui::Painter;
 use egui::Panel;
 use egui::Rect;
 use egui::ScrollArea;
+use egui::Sense;
 use egui::Stroke;
+use egui::UiBuilder;
 use egui::Vec2;
 use egui::Widget;
 use egui::scroll_area::ScrollBarVisibility;
@@ -124,6 +126,7 @@ impl Widget for Timeline<'_> {
                 ticks_per_frame, ..
             } => *ticks_per_frame as f32,
         };
+        let view_time_scale = state.time_zoom / midi_time_scale;
 
         let style = ui.global_style();
         let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
@@ -244,155 +247,158 @@ impl Widget for Timeline<'_> {
                     return ui.add(StatusPage::status_nothing_open());
                 }
 
-                CentralPanel::default()
-                    .frame(Frame::NONE)
-                    .show_inside(ui, |ui| {
-                        timeline_rect = ui.available_rect_before_wrap();
+                let timeline_resp = ui
+                    .scope_builder(UiBuilder::new().sense(Sense::click()), |ui| {
+                        CentralPanel::default()
+                            .frame(Frame::NONE)
+                            .show_inside(ui, |ui| {
+                                timeline_rect = ui.available_rect_before_wrap();
 
-                        ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
-                        ui.set_width(length * state.time_zoom);
+                                ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
+                                ui.set_width(length * state.time_zoom);
 
-                        let faint_bg_color = ui.global_style().visuals.faint_bg_color;
-                        let col_major = Color32::from_hex("#7777").unwrap();
-                        let col_minor = Color32::from_hex("#7773").unwrap();
-                        let col_playhead = Color32::from_hex("#55cc55").unwrap();
-                        let stroke_major = Stroke::new(1., col_major);
-                        let stroke_minor = Stroke::new(1., col_minor);
-                        let stroke_playhead = Stroke::new(1., col_playhead);
-                        let stroke_playhead_top = Stroke::new(4., col_playhead);
+                                let faint_bg_color = ui.global_style().visuals.faint_bg_color;
+                                let col_major = Color32::from_hex("#7777").unwrap();
+                                let col_minor = Color32::from_hex("#7773").unwrap();
+                                let col_cursor = Color32::from_hex("#55cc5577").unwrap();
+                                let col_playhead = Color32::from_hex("#55cc55").unwrap();
+                                let stroke_major = Stroke::new(1., col_major);
+                                let stroke_minor = Stroke::new(1., col_minor);
+                                let stroke_cursor = Stroke::new(1., col_cursor);
+                                let stroke_cursor_top = Stroke::new(4., col_cursor);
+                                let stroke_playhead = Stroke::new(1., col_playhead);
+                                let stroke_playhead_top = Stroke::new(4., col_playhead);
 
-                        let timeline_start = vec2(state.time_off, 0.0);
-                        let tracks_clip_rect =
-                            timeline_rect.with_min_y(timeline_rect.min.y + TOP_HEIGHT);
-                        let tracks_painter =
-                            Painter::new(ui.ctx().clone(), ui.layer_id(), tracks_clip_rect);
-                        let view_time_scale = state.time_zoom / midi_time_scale;
-                        let tracks_scale = vec2(view_time_scale, state.track_height);
-                        let tracks_position = tracks_clip_rect.min - vec2(0.0, state.scroll_off);
-                        let tracks_area_size = tracks_clip_rect.size();
+                                let timeline_start = vec2(state.time_off, 0.0);
+                                let tracks_clip_rect =
+                                    timeline_rect.with_min_y(timeline_rect.min.y + TOP_HEIGHT);
+                                let tracks_painter =
+                                    Painter::new(ui.ctx().clone(), ui.layer_id(), tracks_clip_rect);
+                                let tracks_scale = vec2(view_time_scale, state.track_height);
+                                let tracks_position =
+                                    tracks_clip_rect.min - vec2(0.0, state.scroll_off);
+                                let tracks_area_size = tracks_clip_rect.size();
 
-                        let meter_clip_rect =
-                            timeline_rect.with_max_y(timeline_rect.min.y + TOP_HEIGHT);
+                                let meter_clip_rect =
+                                    timeline_rect.with_max_y(timeline_rect.min.y + TOP_HEIGHT);
 
-                        let meter_painter =
-                            Painter::new(ui.ctx().clone(), ui.layer_id(), meter_clip_rect);
+                                let meter_painter =
+                                    Painter::new(ui.ctx().clone(), ui.layer_id(), meter_clip_rect);
 
-                        // Tracks stripe BG
-                        for i in 0..self.session.tracks().len() {
-                            let min = tracks_position + vec2(0.0, i as f32 * tracks_scale.y);
-                            let max = tracks_position
-                                + vec2(ui.available_width(), (i + 1) as f32 * tracks_scale.y);
+                                // Tracks stripe BG
+                                for i in 0..self.session.tracks().len() {
+                                    let min =
+                                        tracks_position + vec2(0.0, i as f32 * tracks_scale.y);
+                                    let max = tracks_position
+                                        + vec2(
+                                            ui.available_width(),
+                                            (i + 1) as f32 * tracks_scale.y,
+                                        );
 
-                            if i % 2 == 1 {
-                                tracks_painter.rect(
-                                    Rect::from_min_max(min, max),
-                                    0.0,
-                                    faint_bg_color,
-                                    Stroke::NONE,
-                                    egui::StrokeKind::Inside,
-                                );
-                            }
-                        }
-
-                        // Tracks Bar lines
-                        {
-                            let bar_scale = vec2(view_time_scale, tracks_area_size.y);
-                            for bar in self.session.beats_paint_cache() {
-                                let a =
-                                    tracks_clip_rect.min + (bar.0[0] - timeline_start) * bar_scale;
-                                let b =
-                                    tracks_clip_rect.min + (bar.0[1] - timeline_start) * bar_scale;
-                                tracks_painter.line(
-                                    vec![
-                                        a.round() - Vec2::splat(0.5),
-                                        b.round() - Vec2::splat(0.5),
-                                    ],
-                                    if bar.1 { stroke_major } else { stroke_minor },
-                                );
-                            }
-                        }
-
-                        // Tracks
-                        let playing_original = self.session.playback_original();
-                        for (index, track) in self.session.tracks_mut().iter_mut().enumerate() {
-                            let track_row_offset = vec2(0.0, index as f32 * tracks_scale.y);
-                            let position =
-                                tracks_position - timeline_start * tracks_scale + track_row_offset;
-
-                            ui.add(TrackPreview::new(
-                                index,
-                                track,
-                                position,
-                                tracks_scale,
-                                tracks_clip_rect,
-                                playing_original,
-                            ));
-                        }
-
-                        // Meter Fill
-                        meter_painter.rect_filled(meter_clip_rect, 0.0, faint_bg_color);
-
-                        // Meter Events
-                        for (time, event) in self.session.marker_events() {
-                            const ANCHOR: Align2 = Align2::LEFT_TOP;
-                            let pos = meter_clip_rect.min - timeline_start * tracks_scale
-                                + vec2(*time as f32, 0.0) * tracks_scale;
-                            let font_id = FontId::monospace(10.0);
-                            match event {
-                                midi_msg::Meta::Marker(_) => (),
-                                midi_msg::Meta::CuePoint(_) => (),
-                                midi_msg::Meta::EndOfTrack => (),
-                                midi_msg::Meta::SetTempo(tempo) => {
-                                    let bpm = 60_000_000 / tempo;
-                                    let text = format!("{bpm}bpm");
-                                    meter_painter.text(
-                                        pos + vec2(0.0, 12.0),
-                                        ANCHOR,
-                                        text,
-                                        font_id,
-                                        col_major,
-                                    );
-                                }
-                                midi_msg::Meta::TimeSignature(ts) => {
-                                    let text = format!("{}/{}", ts.numerator, ts.denominator);
-                                    meter_painter.text(pos, ANCHOR, text, font_id, col_major);
-                                }
-                                _ => continue,
-                            }
-                        }
-
-                        // Playhead
-                        {
-                            let bar_scale = vec2(view_time_scale, tracks_area_size.y);
-                            if self.session.is_playback_in_progress() {
-                                let time = self.session.playback_position().as_secs_f32();
-
-                                for bar in self.session.cached_bars() {
-                                    if bar.end_time < time {
-                                        continue;
+                                    if i % 2 == 1 {
+                                        tracks_painter.rect(
+                                            Rect::from_min_max(min, max),
+                                            0.0,
+                                            faint_bg_color,
+                                            Stroke::NONE,
+                                            egui::StrokeKind::Inside,
+                                        );
                                     }
+                                }
 
+                                // Tracks Bar lines
+                                {
+                                    let bar_scale = vec2(view_time_scale, tracks_area_size.y);
+                                    for bar in self.session.beats_paint_cache() {
+                                        let a = tracks_clip_rect.min
+                                            + (bar.0[0] - timeline_start) * bar_scale;
+                                        let b = tracks_clip_rect.min
+                                            + (bar.0[1] - timeline_start) * bar_scale;
+                                        tracks_painter.line(
+                                            vec![
+                                                a.round() - Vec2::splat(0.5),
+                                                b.round() - Vec2::splat(0.5),
+                                            ],
+                                            if bar.1 { stroke_major } else { stroke_minor },
+                                        );
+                                    }
+                                }
+
+                                // Tracks
+                                let playing_original = self.session.playback_original();
+                                for (index, track) in
+                                    self.session.tracks_mut().iter_mut().enumerate()
+                                {
+                                    let track_row_offset = vec2(0.0, index as f32 * tracks_scale.y);
+                                    let position = tracks_position - timeline_start * tracks_scale
+                                        + track_row_offset;
+
+                                    ui.add(TrackPreview::new(
+                                        index,
+                                        track,
+                                        position,
+                                        tracks_scale,
+                                        tracks_clip_rect,
+                                        playing_original,
+                                    ));
+                                }
+
+                                // Meter Fill
+                                meter_painter.rect_filled(meter_clip_rect, 0.0, faint_bg_color);
+
+                                // Meter Events
+                                for (time, event) in self.session.marker_events() {
+                                    const ANCHOR: Align2 = Align2::LEFT_TOP;
+                                    let pos = meter_clip_rect.min - timeline_start * tracks_scale
+                                        + vec2(*time as f32, 0.0) * tracks_scale;
+                                    let font_id = FontId::monospace(10.0);
+                                    match event {
+                                        midi_msg::Meta::Marker(_) => (),
+                                        midi_msg::Meta::CuePoint(_) => (),
+                                        midi_msg::Meta::EndOfTrack => (),
+                                        midi_msg::Meta::SetTempo(tempo) => {
+                                            let bpm = 60_000_000 / tempo;
+                                            let text = format!("{bpm}bpm");
+                                            meter_painter.text(
+                                                pos + vec2(0.0, 12.0),
+                                                ANCHOR,
+                                                text,
+                                                font_id,
+                                                col_major,
+                                            );
+                                        }
+                                        midi_msg::Meta::TimeSignature(ts) => {
+                                            let text =
+                                                format!("{}/{}", ts.numerator, ts.denominator);
+                                            meter_painter
+                                                .text(pos, ANCHOR, text, font_id, col_major);
+                                        }
+                                        _ => continue,
+                                    }
+                                }
+
+                                // Cursor and Playhead
+                                {
+                                    let line_scale = vec2(view_time_scale, tracks_area_size.y);
+
+                                    let cursor_pos = self.session.cursor_pos().max(1.0);
                                     let a = tracks_clip_rect.min
-                                        + (vec2(bar.paint_position, 0.0) - timeline_start)
-                                            * bar_scale;
+                                        + (vec2(cursor_pos, 0.0) - timeline_start) * line_scale;
                                     let b = tracks_clip_rect.min
-                                        + (vec2(bar.paint_position, 1.0) - timeline_start)
-                                            * bar_scale;
+                                        + (vec2(cursor_pos, 1.0) - timeline_start) * line_scale;
                                     tracks_painter.line(
                                         vec![
                                             a.round() - Vec2::splat(0.5),
                                             b.round() - Vec2::splat(0.5),
                                         ],
-                                        stroke_playhead,
+                                        stroke_cursor,
                                     );
 
                                     let a = meter_clip_rect.min
-                                        + (vec2(bar.paint_position, 0.0) - timeline_start)
-                                            * bar_scale
+                                        + (vec2(cursor_pos, 0.0) - timeline_start) * line_scale
                                         + vec2(-4.0, TOP_HEIGHT);
                                     let b = meter_clip_rect.min
-                                        + (vec2(bar.paint_position, 0.0) - timeline_start)
-                                            * bar_scale
+                                        + (vec2(cursor_pos, 0.0) - timeline_start) * line_scale
                                         + vec2(4.0, TOP_HEIGHT);
 
                                     meter_painter.line(
@@ -400,15 +406,68 @@ impl Widget for Timeline<'_> {
                                             a.round() - Vec2::splat(0.5),
                                             b.round() - Vec2::splat(0.5),
                                         ],
-                                        stroke_playhead_top,
+                                        stroke_cursor_top,
                                     );
 
-                                    break;
+                                    if self.session.is_playback_in_progress() {
+                                        let time = self.session.playback_position().as_secs_f32();
+
+                                        for bar in self.session.cached_bars() {
+                                            if bar.end_time < time {
+                                                continue;
+                                            }
+                                            let playhead_pos = bar.start_position.max(1.0);
+
+                                            let a = tracks_clip_rect.min
+                                                + (vec2(playhead_pos, 0.0) - timeline_start)
+                                                    * line_scale;
+                                            let b = tracks_clip_rect.min
+                                                + (vec2(playhead_pos, 1.0) - timeline_start)
+                                                    * line_scale;
+                                            tracks_painter.line(
+                                                vec![
+                                                    a.round() - Vec2::splat(0.5),
+                                                    b.round() - Vec2::splat(0.5),
+                                                ],
+                                                stroke_playhead,
+                                            );
+
+                                            let a = meter_clip_rect.min
+                                                + (vec2(playhead_pos, 0.0) - timeline_start)
+                                                    * line_scale
+                                                + vec2(-4.0, TOP_HEIGHT);
+                                            let b = meter_clip_rect.min
+                                                + (vec2(playhead_pos, 0.0) - timeline_start)
+                                                    * line_scale
+                                                + vec2(4.0, TOP_HEIGHT);
+
+                                            meter_painter.line(
+                                                vec![
+                                                    a.round() - Vec2::splat(0.5),
+                                                    b.round() - Vec2::splat(0.5),
+                                                ],
+                                                stroke_playhead_top,
+                                            );
+
+                                            break;
+                                        }
+                                    }
                                 }
-                            }
-                        }
+                            })
+                            .response
                     })
-                    .response
+                    .response;
+
+                if timeline_resp.clicked() {
+                    let rect = timeline_rect;
+                    let relative_cursor_pos =
+                        ui.input(|ui| ui.pointer.hover_pos().unwrap_or_default()) - rect.min;
+                    let position =
+                        state.time_off + relative_cursor_pos.x * midi_time_scale / state.time_zoom;
+                    self.session.set_cursor_pos(position);
+                }
+
+                timeline_resp
             })
             .response;
 

@@ -20,8 +20,9 @@ use crate::crustysynth::CrustySynth;
 pub struct CachedBar {
     #[allow(dead_code)]
     pub start_time: f32,
+    pub start_position: f32,
     pub end_time: f32,
-    pub paint_position: f32,
+    pub end_position: f32,
 }
 
 pub struct Session {
@@ -39,6 +40,7 @@ pub struct Session {
 
     synth: CrustySynth,
     playback_original: bool,
+    selected_bar: usize,
 }
 
 impl Session {
@@ -74,6 +76,7 @@ impl Session {
             is_placeholder: false,
             synth: Default::default(),
             playback_original: false,
+            selected_bar: 0,
         };
         this.generate_cache();
 
@@ -106,6 +109,7 @@ impl Session {
             is_placeholder: true,
             synth: Default::default(),
             playback_original: false,
+            selected_bar: 0,
         }
     }
 
@@ -199,6 +203,45 @@ impl Session {
         self.refresh_synth();
     }
 
+    pub fn cursor_time(&self) -> f32 {
+        if self.selected_bar >= self.cached_bars.len() {
+            return self
+                .cached_bars
+                .last()
+                .map(|bar| bar.start_time)
+                .unwrap_or_default();
+        }
+        self.cached_bars[self.selected_bar].start_time
+    }
+
+    pub fn cursor_pos(&self) -> f32 {
+        if self.selected_bar >= self.cached_bars.len() {
+            return self
+                .cached_bars
+                .last()
+                .map(|bar| bar.start_position)
+                .unwrap_or_default();
+        }
+        self.cached_bars[self.selected_bar].start_position
+    }
+
+    pub fn set_cursor_pos(&mut self, cursor_pos: f32) {
+        fn find(cursor_pos: f32, cached_bars: &[CachedBar]) -> usize {
+            for (i, bar) in cached_bars.iter().enumerate() {
+                if cursor_pos < bar.end_position {
+                    return i;
+                }
+            }
+            0
+        }
+        let index = find(cursor_pos, &self.cached_bars);
+        self.selected_bar = index;
+
+        if self.is_playback_in_progress() {
+            self.synth.seek_to(self.cursor_time());
+        }
+    }
+
     pub fn is_playing(&self) -> bool {
         self.synth.is_playing()
     }
@@ -219,7 +262,11 @@ impl Session {
         if self.synth.midi_file().is_none() {
             self.refresh_synth();
         }
+        let in_progress = self.is_playback_in_progress();
         self.synth.play();
+        if !in_progress {
+            self.synth.seek_to(self.cursor_time());
+        }
     }
 
     pub fn pause(&mut self) {
@@ -332,11 +379,13 @@ impl Session {
             if current_tick == next_beat_tick {
                 if let Some(prev) = bars.last_mut() {
                     prev.end_time = actual_time as f32;
+                    prev.end_position = current_tick as f32;
                 }
                 bars.push(CachedBar {
                     start_time: actual_time as f32,
+                    start_position: current_tick as f32,
                     end_time: f32::INFINITY,
-                    paint_position: current_tick as f32,
+                    end_position: f32::INFINITY,
                 });
 
                 beats_paint_cache.push((
