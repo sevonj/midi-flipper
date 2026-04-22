@@ -255,8 +255,11 @@ impl Widget for TracksView<'_> {
                         let faint_bg_color = ui.global_style().visuals.faint_bg_color;
                         let col_major = Color32::from_hex("#7777").unwrap();
                         let col_minor = Color32::from_hex("#7773").unwrap();
+                        let col_playhead = Color32::from_hex("#55cc55").unwrap();
                         let stroke_major = Stroke::new(1., col_major);
                         let stroke_minor = Stroke::new(1., col_minor);
+                        let stroke_playhead = Stroke::new(1., col_playhead);
+                        let stroke_playhead_top = Stroke::new(4., col_playhead);
 
                         let viewport_time_off = vec2(state.time_off, 0.0);
                         let tracks_clip_rect =
@@ -355,6 +358,53 @@ impl Widget for TracksView<'_> {
                                     meter_painter.text(pos, ANCHOR, text, font_id, col_major);
                                 }
                                 _ => continue,
+                            }
+                        }
+
+                        // Playhead
+                        {
+                            let bar_scale = vec2(view_time_scale, tracks_area_size.y);
+                            if self.session.is_playback_in_progress() {
+                                let time = self.session.playback_position().as_secs_f32();
+
+                                for bar in self.session.cached_bars() {
+                                    if bar.end_time < time {
+                                        continue;
+                                    }
+
+                                    let a = tracks_clip_rect.min
+                                        + (vec2(bar.paint_position, 0.0) - viewport_time_off)
+                                            * bar_scale;
+                                    let b = tracks_clip_rect.min
+                                        + (vec2(bar.paint_position, 1.0) - viewport_time_off)
+                                            * bar_scale;
+                                    tracks_painter.line(
+                                        vec![
+                                            a.round() - Vec2::splat(0.5),
+                                            b.round() - Vec2::splat(0.5),
+                                        ],
+                                        stroke_playhead,
+                                    );
+
+                                    let a = meter_clip_rect.min
+                                        + (vec2(bar.paint_position, 0.0) - viewport_time_off)
+                                            * bar_scale
+                                        + vec2(-4.0, TOP_HEIGHT);
+                                    let b = meter_clip_rect.min
+                                        + (vec2(bar.paint_position, 0.0) - viewport_time_off)
+                                            * bar_scale
+                                        + vec2(4.0, TOP_HEIGHT);
+
+                                    meter_painter.line(
+                                        vec![
+                                            a.round() - Vec2::splat(0.5),
+                                            b.round() - Vec2::splat(0.5),
+                                        ],
+                                        stroke_playhead_top,
+                                    );
+
+                                    break;
+                                }
                             }
                         }
                     })

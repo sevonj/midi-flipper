@@ -6,13 +6,23 @@ use std::time::Duration;
 
 use egui::Vec2;
 use egui::vec2;
+use midi_msg::Division;
 use midi_msg::FileTimeSignature;
 use midi_msg::Meta;
 use midi_msg::MidiFile;
+use midi_msg::TimeCodeType;
 
 use crate::MidiFlipperError;
 use crate::app::data::SessionTrack;
 use crate::crustysynth::CrustySynth;
+
+#[derive(Debug, Clone)]
+pub struct CachedBar {
+    #[allow(dead_code)]
+    pub start_time: f32,
+    pub end_time: f32,
+    pub paint_position: f32,
+}
 
 pub struct Session {
     name: String,
@@ -21,6 +31,7 @@ pub struct Session {
     tracks: Vec<SessionTrack>,
     marker_events: Vec<(f64, Meta)>,
     beats_paint_cache: Vec<([Vec2; 2], bool)>,
+    cached_bars: Vec<CachedBar>,
 
     global_transpose: i32,
     flip_bend: bool,
@@ -57,13 +68,14 @@ impl Session {
             tracks,
             marker_events: vec![],
             beats_paint_cache: vec![],
+            cached_bars: vec![],
             global_transpose,
             flip_bend,
             is_placeholder: false,
             synth: Default::default(),
             playback_original: false,
         };
-        this.generate_bg_paint_cache();
+        this.generate_cache();
 
         Ok(this)
     }
@@ -88,6 +100,7 @@ impl Session {
             tracks: vec![],
             marker_events: vec![],
             beats_paint_cache: vec![],
+            cached_bars: vec![],
             global_transpose: 0,
             flip_bend: false,
             is_placeholder: true,
@@ -122,6 +135,10 @@ impl Session {
 
     pub fn beats_paint_cache(&self) -> &[([Vec2; 2], bool)] {
         &self.beats_paint_cache
+    }
+
+    pub fn cached_bars(&self) -> &[CachedBar] {
+        &self.cached_bars
     }
 
     pub fn marker_events(&self) -> &[(f64, Meta)] {
@@ -243,14 +260,25 @@ impl Session {
         }
     }
 
-    fn generate_bg_paint_cache(&mut self) {
-        let midi_msg::Division::TicksPerQuarterNote(ticks_in_quarter) = self.midi_header.division
-        else {
-            println!("unhandled division");
-            return;
+    fn generate_cache(&mut self) {
+        let ticks_in_whole = {
+            let midi_msg::Division::TicksPerQuarterNote(ticks_in_quarter) =
+                self.midi_header.division
+            else {
+                println!("unhandled division");
+                return;
+            };
+            ticks_in_quarter as usize * 4
         };
-        let ticks_in_whole = ticks_in_quarter * 4;
-        let mut cache = vec![];
+        let mut track_positions = vec![0; self.tracks.len()];
+        let mut current_tick = 0;
+        let mut next_beat_tick = 0;
+        let mut actual_time: f64 = 0.0;
+        let mut bpm = 120.0;
+        let mut beat = 0;
+
+        let mut beats_paint_cache = vec![];
+        let mut bars: Vec<CachedBar> = vec![];
 
         let mut time_signature = FileTimeSignature {
             numerator: 4,
@@ -258,75 +286,96 @@ impl Session {
             clocks_per_metronome_tick: 24,
             thirty_second_notes_per_24_clocks: 8,
         };
-        let mut note_len = ticks_in_whole / time_signature.denominator;
-        let mut beat = 0;
-        let mut next_note_time = 0.0;
-
-        let mut tracks: Vec<_> = self
-            .tracks
-            .iter()
-            .map(|t| t.track_original().midi_track().events().iter())
-            .collect();
-
-        let mut next_events: Vec<_> = tracks.iter_mut().map(|i| (0.0, i.next())).collect();
 
         loop {
-            let Some(next_track) = ({
-                let mut lowest_time = f64::INFINITY;
-                let mut next_track = None;
+            let mut done = true;
+            for (i, track) in self.tracks.iter().enumerate() {
+                let track = track.track_original().midi_track();
+                loop {
+                    let event_idx = track_positions[i];
+                    if event_idx >= track.len() {
+                        break;
+                    }
+                    done = false;
 
-                for (i, (prev_time, event)) in next_events.iter().enumerate() {
-                    let Some(event) = event else {
-                        continue;
-                    };
-                    let ev_time = prev_time + event.delta_time as f64;
-                    if ev_time < lowest_time {
-                        lowest_time = ev_time;
-                        next_track = Some(i);
+                    let track_event = &track.events()[event_idx];
+                    let event_tick = self
+                        .midi_header
+                        .division
+                        .beat_or_frame_to_tick(track_event.beat_or_frame)
+                        as usize;
+                    if current_tick >= event_tick {
+                        track_positions[i] += 1;
+                        if let midi_msg::MidiMsg::Meta { msg } = &track_event.event {
+                            match msg {
+                                Meta::TimeSignature(ts) => {
+                                    time_signature = ts.clone();
+                                    beat = 0;
+                                    self.marker_events.push((current_tick as f64, msg.clone()));
+                                }
+                                Meta::Marker(_) | Meta::EndOfTrack => {
+                                    self.marker_events.push((current_tick as f64, msg.clone()));
+                                }
+                                Meta::SetTempo(tempo) => {
+                                    bpm = 60_000_000. / f64::from(*tempo);
+                                    self.marker_events.push((current_tick as f64, msg.clone()));
+                                }
+                                _ => (),
+                            }
+                        };
+                    } else {
+                        break;
                     }
                 }
-                next_track
-            }) else {
-                break;
-            };
+            }
 
-            let (time, event) = &mut next_events[next_track];
-            let track_event = event.as_deref().unwrap();
+            if current_tick == next_beat_tick {
+                if let Some(prev) = bars.last_mut() {
+                    prev.end_time = actual_time as f32;
+                }
+                bars.push(CachedBar {
+                    start_time: actual_time as f32,
+                    end_time: f32::INFINITY,
+                    paint_position: current_tick as f32,
+                });
 
-            *time += track_event.delta_time as f64;
-
-            while *time > next_note_time {
-                cache.push((
+                beats_paint_cache.push((
                     [
-                        vec2(next_note_time as f32, 0.0),
-                        vec2(next_note_time as f32, 1.0),
+                        vec2(current_tick as f32, 0.0),
+                        vec2(current_tick as f32, 1.0),
                     ],
                     beat == 0,
                 ));
-                next_note_time += note_len as f64;
+                next_beat_tick += ticks_in_whole / time_signature.denominator as usize;
                 beat += 1;
                 beat %= time_signature.denominator;
             }
 
-            if let midi_msg::MidiMsg::Meta { msg } = &track_event.event {
-                match msg {
-                    Meta::TimeSignature(ts) => {
-                        time_signature = ts.clone();
-                        note_len = ticks_in_whole / time_signature.denominator;
-                        beat = 0;
-
-                        self.marker_events.push((*time, msg.clone()));
-                    }
-                    Meta::Marker(_) | Meta::EndOfTrack | Meta::SetTempo(_) => {
-                        self.marker_events.push((*time, msg.clone()));
-                    }
-                    _ => (),
-                }
-            };
-
-            *event = tracks[next_track].next();
+            current_tick += 1;
+            actual_time += self.tick_duration(bpm);
+            if done {
+                break;
+            }
         }
 
-        self.beats_paint_cache = cache;
+        self.beats_paint_cache = beats_paint_cache;
+        self.cached_bars = bars;
+    }
+
+    fn tick_duration(&self, bpm: f64) -> f64 {
+        match self.midi_header.division {
+            Division::TicksPerQuarterNote(ticks) => 60. / bpm / f64::from(ticks),
+            Division::TimeCode {
+                frames_per_second,
+                ticks_per_frame,
+            } => {
+                let fps = match frames_per_second {
+                    TimeCodeType::FPS24 => 24.,
+                    TimeCodeType::FPS25 => 25.,
+                    TimeCodeType::DF30 | TimeCodeType::NDF30 => 30.,
+                };
+                1. / fps / f64::from(ticks_per_frame)
+            }
+        }
     }
 }
