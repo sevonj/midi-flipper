@@ -51,7 +51,7 @@ impl Widget for PlaybackControls<'_> {
                     ui.with_layout(Layout::left_to_right(egui::Align::Center), |ui| {
                         ui.spacing_mut().item_spacing = Vec2::splat(0.0);
 
-                        ui.add_space(2.0);
+                        ui.add_space(3.0);
 
                         if ui
                             .add(
