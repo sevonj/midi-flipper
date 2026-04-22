@@ -23,8 +23,13 @@ pub const SHORTCUT_VP_ZOOM_V_OUT: SCut = SCut::new(COMMAND, Key::PageDown);
 pub const SHORTCUT_VP_START: SCut = SCut::new(NONE, Key::W);
 pub const SHORTCUT_VP_START_ALT: SCut = SCut::new(NONE, Key::Home);
 
+pub const SHORTCUT_PLAYBACK_PLAYSTOP: SCut = SCut::new(NONE, Key::Space);
+pub const SHORTCUT_PLAYBACK_PAUSE: SCut = SCut::new(COMMAND, Key::Space);
+
 impl MidiFlipperApp {
     pub(crate) fn consume_shortcuts(&mut self, ui: &mut Ui) {
+        // --- File
+
         if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_FILE_OPEN)) {
             self.prompt_open_file();
         }
@@ -39,6 +44,26 @@ impl MidiFlipperApp {
 
         if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_QUIT)) {
             ui.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+
+        // --- Playback
+
+        if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_PLAYBACK_PLAYSTOP)) {
+            if !self.session.is_playing() {
+                self.session.play();
+            } else {
+                self.session.stop();
+            }
+        }
+
+        if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_PLAYBACK_PAUSE))
+            && self.session.is_playback_in_progress()
+        {
+            if self.session.is_playing() {
+                self.session.pause();
+            } else {
+                self.session.play();
+            }
         }
     }
 }
