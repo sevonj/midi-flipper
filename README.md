@@ -1,6 +1,6 @@
 # Midi Twister 360
 
-![](assets/twist_800.png)
+![banner](assets/twist_800.png)
 
 **Midi Twister 360** will invert the pitch of every note in your midi files: Up becoms down and down becomes up. Major becomes minor and minor becomes major. Good music becomes bad and bad music becomes a different flavour of bad.
 
@@ -12,7 +12,7 @@ This tool might help if
 - You have a happy ice cream truck jingle, but drive a van that delivers tax notices to depressed adults
 - You just enjoy listening to garbage
 
-<img width="1062" height="828" alt="image" src="https://github.com/user-attachments/assets/54896a0c-27da-48eb-9f36-797cde0371f6" />
+![screenshot](assets/screenshots/screenshot.png)
 
 ## Examples
 
