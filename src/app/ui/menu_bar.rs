@@ -13,6 +13,8 @@ use crate::app::AppTab;
 use crate::app::shortcuts::SHORTCUT_FILE_CLOSE;
 use crate::app::shortcuts::SHORTCUT_FILE_OPEN;
 use crate::app::shortcuts::SHORTCUT_FILE_SAVE;
+use crate::app::shortcuts::SHORTCUT_PLAYBACK_PAUSE;
+use crate::app::shortcuts::SHORTCUT_PLAYBACK_PLAYSTOP;
 use crate::app::shortcuts::SHORTCUT_QUIT;
 use crate::app::widgets::GlobalControls;
 use crate::app::widgets::PlaybackControls;
@@ -34,7 +36,10 @@ impl MidiFlipperApp {
 
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
-                        self.file_menu(ui);
+                        ui.horizontal(|ui| {
+                            self.file_menu(ui);
+                            self.playback_menu(ui);
+                        });
 
                         ui.with_layout(Layout::left_to_right(egui::Align::Max), |ui| {
                             Tab::value(
@@ -107,6 +112,49 @@ impl MidiFlipperApp {
                 .clicked()
             {
                 ui.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
+        });
+    }
+
+    fn playback_menu(&mut self, ui: &mut Ui) {
+        ui.menu_button("Playback", |ui| {
+            let has_session = !self.session.is_placeholder();
+
+            if ui
+                .add_enabled(
+                    has_session && !self.session.is_playing(),
+                    Button::new("Play")
+                        .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_PLAYBACK_PLAYSTOP)),
+                )
+                .clicked()
+            {
+                self.session.play();
+            }
+
+            if ui
+                .add_enabled(
+                    has_session && self.session.is_playing(),
+                    Button::new("Pause")
+                        .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_PLAYBACK_PAUSE)),
+                )
+                .clicked()
+            {
+                self.session.pause();
+            }
+
+            let mut stop_button = Button::new("Stop");
+            if !self.session.is_playback_in_progress() || self.session.is_playing() {
+                stop_button = stop_button
+                    .shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_PLAYBACK_PLAYSTOP));
+            }
+            if ui
+                .add_enabled(
+                    has_session && self.session.is_playback_in_progress(),
+                    stop_button,
+                )
+                .clicked()
+            {
+                self.session.stop();
             }
         });
     }
