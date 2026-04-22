@@ -33,14 +33,14 @@ const MIN_TRACK_HEIGHT: f32 = 76.0;
 const MAX_TRACK_HEIGHT: f32 = 128.0 * 8.0;
 
 #[derive(Debug, Clone)]
-struct ViewPortState {
+struct TimelineState {
     time_zoom: f32,
     time_off: f32,
     scroll_off: f32,
     track_height: f32,
 }
 
-impl Default for ViewPortState {
+impl Default for TimelineState {
     fn default() -> Self {
         Self {
             time_zoom: DEFAULT_ZOOM,
@@ -51,7 +51,7 @@ impl Default for ViewPortState {
     }
 }
 
-impl ViewPortState {
+impl TimelineState {
     pub fn reset_zoom(&mut self) {
         self.time_zoom = DEFAULT_ZOOM;
         self.track_height = MIN_TRACK_HEIGHT;
@@ -102,22 +102,22 @@ impl ViewPortState {
     }
 }
 
-pub struct TracksView<'a> {
+pub struct Timeline<'a> {
     session: &'a mut Session,
 }
 
-impl<'a> TracksView<'a> {
+impl<'a> Timeline<'a> {
     pub fn new(session: &'a mut Session) -> Self {
         Self { session }
     }
 }
 
-impl Widget for TracksView<'_> {
+impl Widget for Timeline<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let length = self.session.length();
 
-        let state_id = ui.id().with("tracks_viewport_state");
-        let mut state = ui.data_mut(|d| d.get_temp::<ViewPortState>(state_id).unwrap_or_default());
+        let state_id = ui.id().with("tracks_timeline_state");
+        let mut state = ui.data_mut(|d| d.get_temp::<TimelineState>(state_id).unwrap_or_default());
         let midi_time_scale = match &self.session.midi_header().division {
             midi_msg::Division::TicksPerQuarterNote(ticks) => *ticks as f32,
             midi_msg::Division::TimeCode {
@@ -128,7 +128,7 @@ impl Widget for TracksView<'_> {
         let style = ui.global_style();
         let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
 
-        let mut midi_viewport_rect = Rect::ZERO;
+        let mut timeline_rect = Rect::ZERO;
         let response = CentralPanel::default()
             .frame(Frame::NONE)
             .show_inside(ui, |ui| {
@@ -240,14 +240,14 @@ impl Widget for TracksView<'_> {
                     });
 
                 if self.session.is_placeholder() {
-                    ui.data_mut(|d| d.insert_temp(state_id, ViewPortState::default()));
+                    ui.data_mut(|d| d.insert_temp(state_id, TimelineState::default()));
                     return ui.add(StatusPage::status_nothing_open());
                 }
 
                 CentralPanel::default()
                     .frame(Frame::NONE)
                     .show_inside(ui, |ui| {
-                        midi_viewport_rect = ui.available_rect_before_wrap();
+                        timeline_rect = ui.available_rect_before_wrap();
 
                         ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
                         ui.set_width(length * state.time_zoom);
@@ -261,9 +261,9 @@ impl Widget for TracksView<'_> {
                         let stroke_playhead = Stroke::new(1., col_playhead);
                         let stroke_playhead_top = Stroke::new(4., col_playhead);
 
-                        let viewport_time_off = vec2(state.time_off, 0.0);
+                        let timeline_start = vec2(state.time_off, 0.0);
                         let tracks_clip_rect =
-                            midi_viewport_rect.with_min_y(midi_viewport_rect.min.y + TOP_HEIGHT);
+                            timeline_rect.with_min_y(timeline_rect.min.y + TOP_HEIGHT);
                         let tracks_painter =
                             Painter::new(ui.ctx().clone(), ui.layer_id(), tracks_clip_rect);
                         let view_time_scale = state.time_zoom / midi_time_scale;
@@ -272,7 +272,7 @@ impl Widget for TracksView<'_> {
                         let tracks_area_size = tracks_clip_rect.size();
 
                         let meter_clip_rect =
-                            midi_viewport_rect.with_max_y(midi_viewport_rect.min.y + TOP_HEIGHT);
+                            timeline_rect.with_max_y(timeline_rect.min.y + TOP_HEIGHT);
 
                         let meter_painter =
                             Painter::new(ui.ctx().clone(), ui.layer_id(), meter_clip_rect);
@@ -298,10 +298,10 @@ impl Widget for TracksView<'_> {
                         {
                             let bar_scale = vec2(view_time_scale, tracks_area_size.y);
                             for bar in self.session.beats_paint_cache() {
-                                let a = tracks_clip_rect.min
-                                    + (bar.0[0] - viewport_time_off) * bar_scale;
-                                let b = tracks_clip_rect.min
-                                    + (bar.0[1] - viewport_time_off) * bar_scale;
+                                let a =
+                                    tracks_clip_rect.min + (bar.0[0] - timeline_start) * bar_scale;
+                                let b =
+                                    tracks_clip_rect.min + (bar.0[1] - timeline_start) * bar_scale;
                                 tracks_painter.line(
                                     vec![
                                         a.round() - Vec2::splat(0.5),
@@ -316,8 +316,8 @@ impl Widget for TracksView<'_> {
                         let playing_original = self.session.playback_original();
                         for (index, track) in self.session.tracks_mut().iter_mut().enumerate() {
                             let track_row_offset = vec2(0.0, index as f32 * tracks_scale.y);
-                            let position = tracks_position - viewport_time_off * tracks_scale
-                                + track_row_offset;
+                            let position =
+                                tracks_position - timeline_start * tracks_scale + track_row_offset;
 
                             ui.add(TrackPreview::new(
                                 index,
@@ -335,7 +335,7 @@ impl Widget for TracksView<'_> {
                         // Meter Events
                         for (time, event) in self.session.marker_events() {
                             const ANCHOR: Align2 = Align2::LEFT_TOP;
-                            let pos = meter_clip_rect.min - viewport_time_off * tracks_scale
+                            let pos = meter_clip_rect.min - timeline_start * tracks_scale
                                 + vec2(*time as f32, 0.0) * tracks_scale;
                             let font_id = FontId::monospace(10.0);
                             match event {
@@ -373,10 +373,10 @@ impl Widget for TracksView<'_> {
                                     }
 
                                     let a = tracks_clip_rect.min
-                                        + (vec2(bar.paint_position, 0.0) - viewport_time_off)
+                                        + (vec2(bar.paint_position, 0.0) - timeline_start)
                                             * bar_scale;
                                     let b = tracks_clip_rect.min
-                                        + (vec2(bar.paint_position, 1.0) - viewport_time_off)
+                                        + (vec2(bar.paint_position, 1.0) - timeline_start)
                                             * bar_scale;
                                     tracks_painter.line(
                                         vec![
@@ -387,11 +387,11 @@ impl Widget for TracksView<'_> {
                                     );
 
                                     let a = meter_clip_rect.min
-                                        + (vec2(bar.paint_position, 0.0) - viewport_time_off)
+                                        + (vec2(bar.paint_position, 0.0) - timeline_start)
                                             * bar_scale
                                         + vec2(-4.0, TOP_HEIGHT);
                                     let b = meter_clip_rect.min
-                                        + (vec2(bar.paint_position, 0.0) - viewport_time_off)
+                                        + (vec2(bar.paint_position, 0.0) - timeline_start)
                                             * bar_scale
                                         + vec2(4.0, TOP_HEIGHT);
 
@@ -421,7 +421,7 @@ impl Widget for TracksView<'_> {
                     _ => None,
                 })
             });
-            let rect = midi_viewport_rect;
+            let rect = timeline_rect;
             let relative_cursor_pos =
                 ui.input(|ui| ui.pointer.hover_pos().unwrap_or_default()) - rect.min;
             let num_tracks = self.session.tracks().len();

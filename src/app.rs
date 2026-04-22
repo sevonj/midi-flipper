@@ -27,7 +27,7 @@ use rfd::FileDialog;
 use crate::MidiFlipperError;
 use crate::app::data::Session;
 use crate::app::widgets::LogView;
-use crate::app::widgets::TracksView;
+use crate::app::widgets::Timeline;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 enum AppTab {
@@ -202,7 +202,7 @@ impl MidiFlipperApp {
     }
 
     fn tab_session(&mut self, ui: &mut Ui) {
-        ui.add(TracksView::new(&mut self.session));
+        ui.add(Timeline::new(&mut self.session));
     }
 
     fn tab_log(&mut self, ui: &mut Ui) {
