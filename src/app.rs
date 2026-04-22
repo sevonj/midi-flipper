@@ -147,6 +147,14 @@ impl MidiFlipperApp {
         dialog.pick_file()
     }
 
+    fn pick_soundfont(&self) -> Option<PathBuf> {
+        let mut dialog = FileDialog::new().add_filter("Soundfont", &["sf2"]);
+        if let Some(dir) = &self.workdir {
+            dialog = dialog.set_directory(dir);
+        }
+        dialog.pick_file()
+    }
+
     fn save_midi_file(&self, file_name: &str) -> Option<PathBuf> {
         let mut dialog = FileDialog::new()
             .add_filter("MIDI Files", &["mid"])

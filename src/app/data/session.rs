@@ -11,6 +11,7 @@ use midi_msg::FileTimeSignature;
 use midi_msg::Meta;
 use midi_msg::MidiFile;
 use midi_msg::TimeCodeType;
+use rustysynth::SoundFont;
 
 use crate::MidiFlipperError;
 use crate::app::data::SessionTrack;
@@ -41,6 +42,7 @@ pub struct Session {
     synth: CrustySynth,
     playback_original: bool,
     selected_bar: usize,
+    custom_soundfont: Option<Arc<SoundFont>>,
 }
 
 impl Session {
@@ -77,6 +79,7 @@ impl Session {
             synth: Default::default(),
             playback_original: false,
             selected_bar: 0,
+            custom_soundfont: None,
         };
         this.generate_cache();
 
@@ -110,6 +113,7 @@ impl Session {
             synth: Default::default(),
             playback_original: false,
             selected_bar: 0,
+            custom_soundfont: None,
         }
     }
 
@@ -256,6 +260,19 @@ impl Session {
 
     pub fn playback_position(&self) -> Duration {
         self.synth.position()
+    }
+
+    pub fn custom_soundfont(&self) -> &Option<Arc<SoundFont>> {
+        &self.custom_soundfont
+    }
+
+    pub fn set_custom_soundfont(&mut self, custom_soundfont: Option<Arc<SoundFont>>) {
+        if let Some(soundfont) = custom_soundfont.as_ref() {
+            self.synth.set_soundfont(soundfont.clone());
+        } else {
+            self.synth.set_soundfont(CrustySynth::default_soundfont());
+        }
+        self.custom_soundfont = custom_soundfont;
     }
 
     pub fn play(&mut self) {

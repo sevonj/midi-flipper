@@ -31,7 +31,7 @@ impl Default for CrustySynth {
             rodio::DeviceSinkBuilder::open_default_sink().expect("Couldn't open sink");
 
         Self {
-            soundfont: default_soundfont(),
+            soundfont: Self::default_soundfont(),
             midi_file: None,
             sink_handle,
             player: None,
@@ -40,6 +40,10 @@ impl Default for CrustySynth {
 }
 
 impl CrustySynth {
+    pub fn default_soundfont() -> Arc<SoundFont> {
+        Arc::new(SoundFont::new(&mut BufReader::new(DEFAULT_SOUNDFONT)).unwrap())
+    }
+
     pub fn midi_file(&self) -> Option<&Arc<MidiFile>> {
         if let Some((midi_file, _)) = &self.midi_file {
             return Some(midi_file);
@@ -156,8 +160,4 @@ impl CrustySynth {
             let _ = player.try_seek(Duration::from_secs_f32(time));
         }
     }
-}
-
-fn default_soundfont() -> Arc<SoundFont> {
-    Arc::new(SoundFont::new(&mut BufReader::new(DEFAULT_SOUNDFONT)).unwrap())
 }
