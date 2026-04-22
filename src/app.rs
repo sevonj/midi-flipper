@@ -57,7 +57,7 @@ pub struct MidiFlipperApp {
 
 impl Default for MidiFlipperApp {
     fn default() -> Self {
-        Self {
+        let mut this = Self {
             workdir: Default::default(),
             session: Session::placeholder(),
             toasts: Default::default(),
@@ -65,7 +65,9 @@ impl Default for MidiFlipperApp {
             tab: Default::default(),
             start: Instant::now(),
             splash_done: false,
-        }
+        };
+        this.log_text(String::from("Hello there!"));
+        this
     }
 }
 
