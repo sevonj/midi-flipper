@@ -24,7 +24,7 @@ jobs:
           echo "PRERELEASE=false" >> $GITHUB_ENV
         fi
     - name: Install dependencies
-      run: sudo apt-get install -y gcc-mingw-w64-x86-64
+      run: sudo apt-get install -y libasound2-dev gcc-mingw-w64-x86-64
     - name: Add targets
       run: rustup target add x86_64-unknown-linux-gnu && rustup target add x86_64-pc-windows-gnu
     - name: Build Linux
