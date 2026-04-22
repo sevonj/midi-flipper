@@ -180,7 +180,7 @@ impl Session {
         for track in &mut self.tracks {
             has_changes |= track.clear_changed();
         }
-        if has_changes && self.is_playback_in_progress() && !self.playback_original {
+        if has_changes && !self.playback_original {
             self.refresh_synth();
         }
     }
