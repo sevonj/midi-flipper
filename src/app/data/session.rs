@@ -139,10 +139,6 @@ impl Session {
         }
     }
 
-    pub fn reset_global_transpose(&mut self) {
-        self.set_global_transpose(0);
-    }
-
     pub fn flip_bend(&self) -> bool {
         self.flip_bend
     }

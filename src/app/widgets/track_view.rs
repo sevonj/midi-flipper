@@ -8,6 +8,7 @@ use egui::Vec2;
 use egui::Widget;
 
 use crate::app::data::SessionTrack;
+use crate::app::widgets::TranspositionControl;
 
 const BUTTON_MIN_SIZE: Vec2 = Vec2::splat(20.0);
 
@@ -71,50 +72,15 @@ impl Widget for TrackView<'_> {
 
                         ui.separator();
 
-                        ui.horizontal(|ui| {
+                        if self.track.flip_enabled() {
                             let mut transposition = self.track.transposition();
-
-                            ui.horizontal(|ui| {
-                                ui.set_width(54.0);
-
-                                if button(ui, "R", "Reset Transposition").clicked() {
-                                    transposition = 0;
-                                    self.track.set_transposition(transposition);
-                                }
-
-                                let sign = if transposition > 0 { "+" } else { "" };
-                                let octaves = transposition / 12;
-                                let oct_string = if octaves != 0 {
-                                    format!("{octaves}:")
-                                } else {
-                                    String::new()
-                                };
-                                let semitones = transposition.abs() % 12;
-                                ui.label(format!("{sign}{oct_string}{semitones}"))
-                                    .on_hover_text("Transposition");
-                            });
-
-                            ui.horizontal(|ui| {
-                                if button(ui, "+1", "Semitone Up").clicked() {
-                                    transposition += 1;
-                                    self.track.set_transposition(transposition);
-                                }
-                                if button(ui, "-1", "Semitone Down").clicked() {
-                                    transposition -= 1;
-                                    self.track.set_transposition(transposition);
-                                }
-                                if button(ui, "+Oct", "Octave Up").clicked() {
-                                    transposition += 12;
-                                    self.track.set_transposition(transposition);
-                                }
-                                if button(ui, "-Oct", "Octave Down").clicked() {
-                                    transposition -= 12;
-                                    self.track.set_transposition(transposition);
-                                }
-                            });
-
-                            ui.add_space(4.0);
-                        });
+                            if ui
+                                .add(TranspositionControl::new(&mut transposition))
+                                .changed()
+                            {
+                                self.track.set_transposition(transposition);
+                            }
+                        }
                     });
                 })
             })
@@ -124,11 +90,6 @@ impl Widget for TrackView<'_> {
 
 fn toggle_button(ui: &mut egui::Ui, selected: bool, label: &str, tooltip: &str) -> egui::Response {
     ui.add(Button::selectable(selected, label).min_size(BUTTON_MIN_SIZE))
-        .on_hover_text(tooltip)
-}
-
-fn button(ui: &mut egui::Ui, label: &str, tooltip: &str) -> egui::Response {
-    ui.add(Button::new(label).min_size(BUTTON_MIN_SIZE))
         .on_hover_text(tooltip)
 }
 

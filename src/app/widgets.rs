@@ -8,6 +8,7 @@ mod tab;
 mod track_preview;
 mod track_view;
 mod tracks_view;
+mod transposition_control;
 
 pub use global_controls::GlobalControls;
 pub use log_view::LogView;
@@ -17,3 +18,4 @@ pub use tab::Tab;
 pub use track_preview::TrackPreview;
 pub use track_view::TrackView;
 pub use tracks_view::TracksView;
+pub use transposition_control::TranspositionControl;
