@@ -136,6 +136,10 @@ impl CrustySynth {
     }
 
     pub fn play(&mut self) {
+        if !self.is_playback_in_progress() {
+            self.start();
+            return;
+        }
         let Some(player) = &self.player else {
             self.start();
             return;
