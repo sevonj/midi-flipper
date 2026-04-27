@@ -162,7 +162,7 @@ impl MidiFlipperApp {
             ui.label("Soundfont");
             let has_custom_sf = self.custom_soundfont().is_some();
             if ui.radio(!has_custom_sf, "Default").clicked() {
-                self.session.set_custom_soundfont(None);
+                self.set_custom_soundfont(None);
                 self.log_text(String::from("Loaded default soundfont"));
             };
 
