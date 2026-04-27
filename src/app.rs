@@ -55,6 +55,7 @@ pub struct MidiFlipperApp {
     tab: AppTab,
     start: Instant,
     splash_done: bool,
+    session_init: bool,
     custom_soundfont: Option<Arc<SoundFont>>,
 }
 
@@ -68,6 +69,7 @@ impl Default for MidiFlipperApp {
             tab: Default::default(),
             start: Instant::now(),
             splash_done: false,
+            session_init: false,
             custom_soundfont: None,
         };
         this.log_text(String::from("Hello there!"));
@@ -98,6 +100,7 @@ impl MidiFlipperApp {
             }
         };
         session.set_custom_soundfont(self.custom_soundfont.clone());
+        self.session_init = false;
         self.session = session;
     }
 
@@ -258,6 +261,11 @@ impl App for MidiFlipperApp {
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
             ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(1200.0, 800.0)));
             self.splash_done = true;
+        }
+
+        if !self.session_init {
+            Timeline::clear_state(ui);
+            self.session_init = true;
         }
 
         // --- Actual UI

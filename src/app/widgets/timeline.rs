@@ -114,11 +114,21 @@ impl<'a> Timeline<'a> {
     }
 }
 
+impl Timeline<'_> {
+    pub fn clear_state(ui: &mut egui::Ui) {
+        ui.data_mut(|d| d.remove_temp::<TimelineState>(Self::state_id(ui)));
+    }
+
+    fn state_id(ui: &egui::Ui) -> egui::Id {
+        ui.id().with("tracks_timeline_state")
+    }
+}
+
 impl Widget for Timeline<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         let length = self.session.length();
 
-        let state_id = ui.id().with("tracks_timeline_state");
+        let state_id = Self::state_id(ui);
         let mut state = ui.data_mut(|d| d.get_temp::<TimelineState>(state_id).unwrap_or_default());
         let midi_time_scale = match &self.session.midi_header().division {
             midi_msg::Division::TicksPerQuarterNote(ticks) => *ticks as f32,
