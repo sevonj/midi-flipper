@@ -31,7 +31,7 @@ impl MidiFlipperApp {
         // --- File
 
         if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_FILE_OPEN)) {
-            self.prompt_open_file();
+            self.prompt_open_midi();
         }
 
         if ui.input_mut(|input| input.consume_shortcut(&SHORTCUT_FILE_SAVE)) {

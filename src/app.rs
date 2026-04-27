@@ -83,11 +83,21 @@ impl MidiFlipperApp {
         Default::default()
     }
 
-    pub fn prompt_open_file(&mut self) {
+    pub fn prompt_open_midi(&mut self) {
         let Some(file_path) = self.pick_midi_file() else {
             return;
         };
+        self.try_open_midi(file_path);
+    }
 
+    pub fn prompt_open_soundfont(&mut self) {
+        let Some(file_path) = self.pick_soundfont() else {
+            return;
+        };
+        self.try_open_soundfont(file_path);
+    }
+
+    pub fn try_open_midi(&mut self, file_path: PathBuf) {
         self.log_text(format!("Opening {file_path:?}"));
         self.workdir = file_path.parent().map(|p| p.to_path_buf());
 
@@ -102,6 +112,22 @@ impl MidiFlipperApp {
         session.set_custom_soundfont(self.custom_soundfont.clone());
         self.session_init = false;
         self.session = session;
+    }
+
+    pub fn try_open_soundfont(&mut self, file_path: PathBuf) {
+        self.log_text(format!("Opening {file_path:?}"));
+
+        match std::fs::File::open(file_path) {
+            Ok(file) => match rustysynth::SoundFont::new(&mut std::io::BufReader::new(file)) {
+                Ok(soundfont) => {
+                    let sf_name = soundfont.get_info().get_bank_name().to_string();
+                    self.set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
+                    self.log_text(format!("Loaded soundfont: {sf_name:?}"));
+                }
+                Err(e) => self.log_text(e.to_string()),
+            },
+            Err(e) => self.log_text(e.to_string()),
+        }
     }
 
     pub fn is_session_open(&self) -> bool {
@@ -282,5 +308,23 @@ impl App for MidiFlipperApp {
         if self.session.is_playing() {
             ui.request_repaint();
         }
+
+        ui.input(|i| {
+            let Some(file) = i.raw.dropped_files.first() else {
+                return;
+            };
+            let Some(file_path) = file.path.clone() else {
+                return;
+            };
+            let Some(ext) = file_path.extension() else {
+                return;
+            };
+
+            match ext.to_ascii_lowercase().to_str() {
+                Some("mid") | Some("midi") => self.try_open_midi(file_path),
+                Some("sf2") => self.try_open_soundfont(file_path),
+                _ => (),
+            };
+        });
     }
 }

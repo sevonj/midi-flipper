@@ -103,7 +103,7 @@ impl MidiFlipperApp {
                 )
                 .clicked()
             {
-                self.prompt_open_file();
+                self.prompt_open_midi();
             }
 
             if ui
@@ -195,25 +195,7 @@ impl MidiFlipperApp {
                 "Use Custom"
             };
             if ui.radio(has_custom_sf, custom_sf_label).clicked() {
-                let Some(file_path) = self.pick_soundfont() else {
-                    return;
-                };
-
-                self.log_text(format!("Opening {file_path:?}"));
-
-                match std::fs::File::open(file_path) {
-                    Ok(file) => {
-                        match rustysynth::SoundFont::new(&mut std::io::BufReader::new(file)) {
-                            Ok(soundfont) => {
-                                let sf_name = soundfont.get_info().get_bank_name().to_string();
-                                self.set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
-                                self.log_text(format!("Loaded soundfont: {sf_name:?}"));
-                            }
-                            Err(e) => self.log_text(e.to_string()),
-                        }
-                    }
-                    Err(e) => self.log_text(e.to_string()),
-                }
+                self.prompt_open_soundfont();
             };
         });
     }
