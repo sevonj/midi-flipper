@@ -262,6 +262,14 @@ impl Session {
         self.synth.position()
     }
 
+    pub fn playback_volume(&self) -> f32 {
+        self.synth.volume()
+    }
+
+    pub fn set_playback_volume(&mut self, volume: f32) {
+        self.synth.set_volume(volume)
+    }
+
     pub fn set_custom_soundfont(&mut self, custom_soundfont: Option<Arc<SoundFont>>) {
         if let Some(soundfont) = custom_soundfont.as_ref() {
             self.synth.set_soundfont(soundfont.clone());

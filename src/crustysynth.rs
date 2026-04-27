@@ -23,6 +23,7 @@ pub struct CrustySynth {
     midi_file: Option<(Arc<MidiFile>, Duration)>,
     sink_handle: MixerDeviceSink,
     player: Option<Player>,
+    volume: f32,
 }
 
 impl Default for CrustySynth {
@@ -35,6 +36,7 @@ impl Default for CrustySynth {
             midi_file: None,
             sink_handle,
             player: None,
+            volume: 1.0,
         }
     }
 }
@@ -98,6 +100,17 @@ impl CrustySynth {
         self.soundfont = soundfont;
     }
 
+    pub fn volume(&self) -> f32 {
+        self.volume
+    }
+
+    pub fn set_volume(&mut self, volume: f32) {
+        self.volume = volume;
+        if let Some(player) = &self.player {
+            player.set_volume(volume);
+        };
+    }
+
     pub fn is_playing(&self) -> bool {
         self.player
             .as_ref()
@@ -129,6 +142,7 @@ impl CrustySynth {
         };
 
         let player = Player::connect_new(self.sink_handle.mixer());
+        player.set_volume(self.volume);
         let source = MidiSource::new(&self.soundfont, midi_file);
         player.append(source);
         player.play();

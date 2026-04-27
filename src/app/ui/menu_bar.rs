@@ -5,6 +5,7 @@ use egui::Color32;
 use egui::Frame;
 use egui::Layout;
 use egui::Panel;
+use egui::Slider;
 use egui::Ui;
 use egui::vec2;
 
@@ -66,6 +67,28 @@ impl MidiFlipperApp {
                     ui.separator();
 
                     ui.add(GlobalControls::new(&mut self.session));
+
+                    ui.separator();
+
+                    ui.vertical(|ui| {
+                        ui.label("Master Volume");
+
+                        let state_id = ui.id().with("tracks_timeline_state");
+
+                        let mut volume = self.session.playback_volume();
+                        let mut use_big_range =
+                            ui.data_mut(|d| d.get_temp::<bool>(state_id).unwrap_or_default());
+
+                        ui.horizontal(|ui| {
+                            let loud_changed = ui.checkbox(&mut use_big_range, "⚠ Loud").changed();
+                            let range = if use_big_range { 0.0..=10.0 } else { 0.0..=2.0 };
+                            if ui.add(Slider::new(&mut volume, range)).changed() || loud_changed {
+                                self.session.set_playback_volume(volume);
+                            }
+                        });
+
+                        ui.data_mut(|d| d.insert_temp(state_id, use_big_range));
+                    });
                 });
             })
             .response
