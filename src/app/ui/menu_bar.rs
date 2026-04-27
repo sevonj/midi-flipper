@@ -160,13 +160,13 @@ impl MidiFlipperApp {
             ui.separator();
 
             ui.label("Soundfont");
-            let has_custom_sf = self.session.custom_soundfont().is_some();
+            let has_custom_sf = self.custom_soundfont().is_some();
             if ui.radio(!has_custom_sf, "Default").clicked() {
                 self.session.set_custom_soundfont(None);
                 self.log_text(String::from("Loaded default soundfont"));
             };
 
-            let custom_sf_label = if let Some(sf) = self.session.custom_soundfont() {
+            let custom_sf_label = if let Some(sf) = self.custom_soundfont() {
                 sf.get_info().get_bank_name()
             } else {
                 "Use Custom"
@@ -183,8 +183,7 @@ impl MidiFlipperApp {
                         match rustysynth::SoundFont::new(&mut std::io::BufReader::new(file)) {
                             Ok(soundfont) => {
                                 let sf_name = soundfont.get_info().get_bank_name().to_string();
-                                self.session
-                                    .set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
+                                self.set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
                                 self.log_text(format!("Loaded soundfont: {sf_name:?}"));
                             }
                             Err(e) => self.log_text(e.to_string()),

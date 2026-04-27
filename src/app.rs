@@ -7,6 +7,7 @@ mod widgets;
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -23,6 +24,7 @@ use egui_toast::ToastKind;
 use egui_toast::ToastOptions;
 use egui_toast::Toasts;
 use rfd::FileDialog;
+use rustysynth::SoundFont;
 
 use crate::MidiFlipperError;
 use crate::app::data::Session;
@@ -53,6 +55,7 @@ pub struct MidiFlipperApp {
     tab: AppTab,
     start: Instant,
     splash_done: bool,
+    custom_soundfont: Option<Arc<SoundFont>>,
 }
 
 impl Default for MidiFlipperApp {
@@ -65,6 +68,7 @@ impl Default for MidiFlipperApp {
             tab: Default::default(),
             start: Instant::now(),
             splash_done: false,
+            custom_soundfont: None,
         };
         this.log_text(String::from("Hello there!"));
         this
@@ -85,7 +89,7 @@ impl MidiFlipperApp {
         self.log_text(format!("Opening {file_path:?}"));
         self.workdir = file_path.parent().map(|p| p.to_path_buf());
 
-        let session = match Session::from_file(file_path) {
+        let mut session = match Session::from_file(file_path) {
             Ok(session) => session,
             Err(e) => {
                 self.log_err(&e);
@@ -93,6 +97,7 @@ impl MidiFlipperApp {
                 return;
             }
         };
+        session.set_custom_soundfont(self.custom_soundfont.clone());
         self.session = session;
     }
 
@@ -102,6 +107,15 @@ impl MidiFlipperApp {
 
     pub fn can_save(&self) -> bool {
         self.is_session_open()
+    }
+
+    pub fn custom_soundfont(&self) -> &Option<Arc<SoundFont>> {
+        &self.custom_soundfont
+    }
+
+    pub fn set_custom_soundfont(&mut self, custom_soundfont: Option<Arc<SoundFont>>) {
+        self.custom_soundfont = custom_soundfont.clone();
+        self.session.set_custom_soundfont(custom_soundfont);
     }
 
     pub fn prompt_save_file(&mut self) {

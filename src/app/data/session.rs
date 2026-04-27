@@ -262,10 +262,6 @@ impl Session {
         self.synth.position()
     }
 
-    pub fn custom_soundfont(&self) -> &Option<Arc<SoundFont>> {
-        &self.custom_soundfont
-    }
-
     pub fn set_custom_soundfont(&mut self, custom_soundfont: Option<Arc<SoundFont>>) {
         if let Some(soundfont) = custom_soundfont.as_ref() {
             self.synth.set_soundfont(soundfont.clone());
