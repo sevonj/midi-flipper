@@ -164,71 +164,17 @@ impl Widget for Timeline<'_> {
                                     ui.add_space(2.0);
 
                                     ui.menu_button("ℹ", |ui| {
-                                        ui.strong("Viewport Controls");
-                                        ui.horizontal(|ui| {
-                                            ui.vertical(|ui| {
-                                                ui.weak("Scroll");
-                                                ui.weak("Alt+Scroll");
-                                                ui.weak("Ctrl+Scroll");
-                                                ui.weak("Shift+Scroll");
-                                            });
-                                            ui.vertical(|ui| {
-                                                ui.label("Scroll vertically");
-                                                ui.label("Scroll horizontally");
-                                                ui.label("Zoom horizontally");
-                                                ui.label("Zoom vertically");
-                                            });
-                                        });
-
-                                        ui.separator();
-
-                                        ui.horizontal(|ui| {
-                                            ui.vertical(|ui| {
-                                                ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_H_IN));
-                                                ui.weak(
-                                                    ui.format_shortcut(&SHORTCUT_VP_ZOOM_H_OUT),
-                                                );
-                                                ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_V_IN));
-                                                ui.weak(
-                                                    ui.format_shortcut(&SHORTCUT_VP_ZOOM_V_OUT),
-                                                );
-                                            });
-                                            ui.vertical(|ui| {
-                                                ui.label("Zoom in horizontally");
-                                                ui.label("Zoom out horizontally");
-                                                ui.label("Zoom in vertically");
-                                                ui.label("Zoom out vertically");
-                                            });
-                                        });
-
-                                        ui.separator();
-
-                                        ui.horizontal(|ui| {
-                                            ui.vertical(|ui| {
-                                                ui.weak(
-                                                    ui.format_shortcut(&SHORTCUT_VP_ZOOM_RESET),
-                                                );
-                                            });
-                                            ui.vertical(|ui| {
-                                                ui.label("Reset zoom");
-                                            });
-                                        });
-
-                                        ui.separator();
-
-                                        ui.horizontal(|ui| {
-                                            ui.vertical(|ui| {
-                                                ui.weak(format!(
-                                                    "{} or {}",
-                                                    ui.format_shortcut(&SHORTCUT_VP_START),
-                                                    ui.format_shortcut(&SHORTCUT_VP_START_ALT)
-                                                ));
-                                            });
-                                            ui.vertical(|ui| {
-                                                ui.label("Go to start");
-                                            });
-                                        });
+                                        timeline_help_ui(ui);
                                     });
+
+                                    if ui
+                                        .button("⏮")
+                                        .on_hover_text("Go to start (W or Home)")
+                                        .clicked()
+                                    {
+                                        state.time_off = 0.0;
+                                        self.session.set_cursor_pos(0.0);
+                                    }
                                 });
                             });
 
@@ -531,10 +477,70 @@ impl Widget for Timeline<'_> {
                 i.consume_shortcut(&SHORTCUT_VP_START) || i.consume_shortcut(&SHORTCUT_VP_START_ALT)
             }) {
                 state.time_off = 0.0;
+                self.session.set_cursor_pos(0.0);
             }
         }
         ui.data_mut(|d| d.insert_temp(state_id, state));
 
         response
     }
+}
+
+fn timeline_help_ui(ui: &mut egui::Ui) {
+    ui.strong("Timeline Controls");
+    ui.horizontal(|ui| {
+        ui.vertical(|ui| {
+            ui.weak("Scroll");
+            ui.weak("Alt+Scroll");
+            ui.weak("Ctrl+Scroll");
+            ui.weak("Shift+Scroll");
+        });
+        ui.vertical(|ui| {
+            ui.label("Scroll vertically");
+            ui.label("Scroll horizontally");
+            ui.label("Zoom horizontally");
+            ui.label("Zoom vertically");
+        });
+    });
+
+    ui.separator();
+
+    ui.strong("Timeline Shortcuts");
+
+    ui.horizontal(|ui| {
+        ui.vertical(|ui| {
+            ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_H_IN));
+            ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_H_OUT));
+            ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_V_IN));
+            ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_V_OUT));
+        });
+        ui.vertical(|ui| {
+            ui.label("Zoom in horizontally");
+            ui.label("Zoom out horizontally");
+            ui.label("Zoom in vertically");
+            ui.label("Zoom out vertically");
+        });
+    });
+
+    ui.horizontal(|ui| {
+        ui.vertical(|ui| {
+            ui.weak(ui.format_shortcut(&SHORTCUT_VP_ZOOM_RESET));
+        });
+        ui.vertical(|ui| {
+            ui.label("Reset zoom");
+        });
+    });
+
+    ui.horizontal(|ui| {
+        ui.vertical(|ui| {
+            ui.weak(format!(
+                "{} or {}",
+                ui.format_shortcut(&SHORTCUT_VP_START),
+                ui.format_shortcut(&SHORTCUT_VP_START_ALT)
+            ));
+        });
+        ui.vertical(|ui| {
+            ui.label("Go to start");
+        });
+    });
 }
