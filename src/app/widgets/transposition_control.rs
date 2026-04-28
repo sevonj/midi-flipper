@@ -65,9 +65,13 @@ impl Widget for TranspositionControl<'_> {
 
 fn format_transposition(value: f64, _range: RangeInclusive<usize>) -> String {
     let transposition = value as i32;
-    let sign = if transposition > 0 { "+" } else { "" };
+    let sign = match transposition {
+        x if x > 0 => "+",
+        x if x < 0 => "-",
+        _ => "",
+    };
 
-    let octaves = transposition / 12;
+    let octaves = transposition.abs() / 12;
     let oct_string = if octaves != 0 {
         format!("{octaves}:")
     } else {
