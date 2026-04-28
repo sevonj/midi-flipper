@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use egui::Align2;
+use egui::Button;
 use egui::CentralPanel;
 use egui::Color32;
 use egui::FontId;
@@ -14,6 +15,7 @@ use egui::Stroke;
 use egui::UiBuilder;
 use egui::Vec2;
 use egui::Widget;
+use egui::include_image;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::vec2;
 
@@ -40,6 +42,7 @@ struct TimelineState {
     time_off: f32,
     scroll_off: f32,
     track_height: f32,
+    follow_playhead: bool,
 }
 
 impl Default for TimelineState {
@@ -49,6 +52,7 @@ impl Default for TimelineState {
             time_off: 0.0,
             scroll_off: 0.0,
             track_height: MIN_TRACK_HEIGHT,
+            follow_playhead: true,
         }
     }
 }
@@ -102,6 +106,13 @@ impl TimelineState {
             * relative_cursor_pos.y
             / rect.height();
     }
+
+    pub fn clamp_positions(&mut self, rect: Rect, num_tracks: usize, length: f32) {
+        let scroll_max =
+            (TOP_HEIGHT + num_tracks as f32 * self.track_height - rect.height()).max(0.0);
+        self.time_off = self.time_off.clamp(0.0, length);
+        self.scroll_off = self.scroll_off.clamp(0.0, scroll_max);
+    }
 }
 
 pub struct Timeline<'a> {
@@ -115,8 +126,13 @@ impl<'a> Timeline<'a> {
 }
 
 impl Timeline<'_> {
-    pub fn clear_state(ui: &mut egui::Ui) {
-        ui.data_mut(|d| d.remove_temp::<TimelineState>(Self::state_id(ui)));
+    pub fn reset_zoom_position(ui: &mut egui::Ui) {
+        let state_id = Self::state_id(ui);
+        let mut state = ui.data_mut(|d| d.get_temp::<TimelineState>(state_id).unwrap_or_default());
+        state.reset_zoom();
+        state.time_off = 0.0;
+        state.scroll_off = 0.0;
+        ui.data_mut(|d| d.insert_temp(state_id, state));
     }
 
     fn state_id(ui: &egui::Ui) -> egui::Id {
@@ -137,6 +153,7 @@ impl Widget for Timeline<'_> {
             } => *ticks_per_frame as f32,
         };
         let view_time_scale = state.time_zoom / midi_time_scale;
+        let mut playhead_position = None;
 
         let style = ui.global_style();
         let weak_bg_fill = style.visuals.widgets.open.weak_bg_fill;
@@ -168,12 +185,31 @@ impl Widget for Timeline<'_> {
                                     });
 
                                     if ui
-                                        .button("⏮")
+                                        .add(
+                                            Button::image(include_image!(
+                                                "../../../assets/icon_start.svg"
+                                            ))
+                                            .image_tint_follows_text_color(true),
+                                        )
                                         .on_hover_text("Go to start (W or Home)")
                                         .clicked()
                                     {
                                         state.time_off = 0.0;
                                         self.session.set_cursor_pos(0.0);
+                                    }
+
+                                    if ui
+                                        .add(
+                                            Button::image(include_image!(
+                                                "../../../assets/icon_playhead.svg"
+                                            ))
+                                            .image_tint_follows_text_color(true)
+                                            .selected(state.follow_playhead),
+                                        )
+                                        .on_hover_text("Follow Playhead")
+                                        .clicked()
+                                    {
+                                        state.follow_playhead = !state.follow_playhead;
                                     }
                                 });
                             });
@@ -405,6 +441,7 @@ impl Widget for Timeline<'_> {
                                                 stroke_playhead_top,
                                             );
 
+                                            playhead_position = Some(playhead_pos);
                                             break;
                                         }
                                     }
@@ -458,11 +495,7 @@ impl Widget for Timeline<'_> {
                     }
                 }
 
-                state.time_off = state.time_off.clamp(0.0, length);
-                let scroll_max =
-                    (TOP_HEIGHT + num_tracks as f32 * state.track_height - rect.height()).max(0.0);
-
-                state.scroll_off = state.scroll_off.clamp(0.0, scroll_max);
+                state.clamp_positions(rect, num_tracks, length);
             } else if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_VP_ZOOM_RESET)) {
                 state.reset_zoom();
             } else if ui.input_mut(|i| i.consume_shortcut(&SHORTCUT_VP_ZOOM_H_IN)) {
@@ -480,6 +513,15 @@ impl Widget for Timeline<'_> {
                 self.session.set_cursor_pos(0.0);
             }
         }
+
+        if state.follow_playhead
+            && let Some(playhead_position) = playhead_position
+        {
+            let half_screen = timeline_rect.width() / 2.0 / view_time_scale;
+            state.time_off = playhead_position - half_screen;
+            state.clamp_positions(timeline_rect, self.session.tracks().len(), length);
+        }
+
         ui.data_mut(|d| d.insert_temp(state_id, state));
 
         response

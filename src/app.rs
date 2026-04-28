@@ -290,7 +290,7 @@ impl App for MidiFlipperApp {
         }
 
         if !self.session_init {
-            Timeline::clear_state(ui);
+            Timeline::reset_zoom_position(ui);
             self.session_init = true;
         }
 
