@@ -103,11 +103,17 @@ impl Widget for PlaybackControls<'_> {
                                 .wrap_mode(egui::TextWrapMode::Truncate),
                         );
                         ui.horizontal(|ui| {
-                            ui.monospace(format!(
-                                "{}/{}",
-                                format_duration(session.playback_position()),
+                            let position = if session.is_playback_in_progress() {
+                                format_duration(session.playback_position())
+                            } else {
+                                String::from("--:--")
+                            };
+                            let duration = if !session.is_placeholder() {
                                 format_duration(session.playback_duration())
-                            ));
+                            } else {
+                                String::from("--:--")
+                            };
+                            ui.monospace(format!("{position}/{duration}"));
                         })
                     });
 

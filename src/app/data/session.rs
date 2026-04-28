@@ -82,6 +82,7 @@ impl Session {
             custom_soundfont: None,
         };
         this.generate_cache();
+        this.refresh_synth();
 
         Ok(this)
     }
