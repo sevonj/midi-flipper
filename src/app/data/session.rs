@@ -263,10 +263,6 @@ impl Session {
         self.synth.position()
     }
 
-    pub fn playback_volume(&self) -> f32 {
-        self.synth.volume()
-    }
-
     pub fn set_playback_volume(&mut self, volume: f32) {
         self.synth.set_volume(volume)
     }

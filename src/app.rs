@@ -57,6 +57,7 @@ pub struct MidiFlipperApp {
     splash_done: bool,
     session_init: bool,
     custom_soundfont: Option<Arc<SoundFont>>,
+    master_volume: f32,
 }
 
 impl Default for MidiFlipperApp {
@@ -71,6 +72,7 @@ impl Default for MidiFlipperApp {
             splash_done: false,
             session_init: false,
             custom_soundfont: None,
+            master_volume: 1.0,
         };
         this.log_text(String::from("Hello there!"));
         this
@@ -78,6 +80,15 @@ impl Default for MidiFlipperApp {
 }
 
 impl MidiFlipperApp {
+    pub const fn master_volume(&self) -> f32 {
+        self.master_volume
+    }
+
+    pub fn set_master_volume(&mut self, master_volume: f32) {
+        self.master_volume = master_volume;
+        self.session.set_playback_volume(master_volume);
+    }
+
     pub fn new(cc: &CreationContext<'_>) -> Self {
         cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
         Default::default()

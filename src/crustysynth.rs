@@ -100,6 +100,7 @@ impl CrustySynth {
         self.soundfont = soundfont;
     }
 
+    #[allow(dead_code)]
     pub fn volume(&self) -> f32 {
         self.volume
     }

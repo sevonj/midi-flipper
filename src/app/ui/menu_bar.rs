@@ -75,7 +75,7 @@ impl MidiFlipperApp {
 
                         let state_id = ui.id().with("tracks_timeline_state");
 
-                        let mut volume = self.session.playback_volume();
+                        let mut volume = self.master_volume();
                         let mut use_big_range =
                             ui.data_mut(|d| d.get_temp::<bool>(state_id).unwrap_or_default());
 
@@ -83,7 +83,7 @@ impl MidiFlipperApp {
                             let loud_changed = ui.checkbox(&mut use_big_range, "⚠ Loud").changed();
                             let range = if use_big_range { 0.0..=10.0 } else { 0.0..=2.0 };
                             if ui.add(Slider::new(&mut volume, range)).changed() || loud_changed {
-                                self.session.set_playback_volume(volume);
+                                self.set_master_volume(volume);
                             }
                         });
 
