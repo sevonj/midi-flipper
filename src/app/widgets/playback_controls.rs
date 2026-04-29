@@ -104,7 +104,7 @@ impl Widget for PlaybackControls<'_> {
 
                     Frame::new().inner_margin(4.0).show(ui, |ui| {
                         ui.vertical(|ui| {
-                            ui.set_width(192.0);
+                            ui.set_width(170.0);
 
                             ui.add(
                                 Label::new(RichText::new(session.name()).monospace())

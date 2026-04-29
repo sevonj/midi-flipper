@@ -6,6 +6,7 @@ use std::error::Error;
 pub enum MidiFlipperError {
     Io(std::io::Error),
     MidiParse(midi_msg::MidiFileParseError),
+    FontParse(rustysynth::SoundFontError),
 }
 
 impl From<std::io::Error> for MidiFlipperError {
@@ -20,6 +21,12 @@ impl From<midi_msg::MidiFileParseError> for MidiFlipperError {
     }
 }
 
+impl From<rustysynth::SoundFontError> for MidiFlipperError {
+    fn from(source: rustysynth::SoundFontError) -> Self {
+        Self::FontParse(source)
+    }
+}
+
 impl std::fmt::Display for MidiFlipperError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use MidiFlipperError::*;
@@ -27,6 +34,7 @@ impl std::fmt::Display for MidiFlipperError {
         match self {
             Io(_) => write!(f, "IO Error"),
             MidiParse(_) => write!(f, "Couldn't parse MIDI file"),
+            FontParse(_) => write!(f, "Couldn't parse soundfont"),
         }
     }
 }

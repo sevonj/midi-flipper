@@ -2,12 +2,16 @@
 
 use egui::Button;
 use egui::Color32;
+use egui::CursorIcon;
 use egui::Frame;
 use egui::Image;
+use egui::Label;
 use egui::Layout;
 use egui::Panel;
+use egui::ScrollArea;
 use egui::Slider;
 use egui::Ui;
+use egui::scroll_area::ScrollBarVisibility;
 use egui::vec2;
 
 use crate::MidiFlipperApp;
@@ -22,31 +26,36 @@ use crate::app::widgets::GlobalControls;
 use crate::app::widgets::PlaybackControls;
 use crate::app::widgets::Tab;
 
-const BAR_HEIGHT: f32 = 48.0;
+const PANEL_HEIGHT: f32 = 48.0;
+const PANEL_CORNER_RADIUS: f32 = 1.0;
 
 impl MidiFlipperApp {
     pub(crate) fn menu_bar(&mut self, ui: &mut Ui) -> egui::Response {
         Panel::top("menu_bar")
             .resizable(false)
-            .exact_size(BAR_HEIGHT)
+            .exact_size(PANEL_HEIGHT)
             .show_separator_line(false)
             .frame(
                 Frame::default()
                     .inner_margin(vec2(8., 2.))
-                    .fill(Color32::from_hex("#4a4a4a").unwrap()),
+                    .fill(Color32::from_hex("#4a4a4a").unwrap())
+                    .corner_radius(PANEL_CORNER_RADIUS),
             )
             .show_inside(ui, |ui| {
                 let bar_rect = ui.content_rect();
                 Image::from(egui::include_image!(
                     "../../../assets/tex_toolbar_gradient.svg"
                 ))
-                .paint_at(ui, bar_rect.with_max_y(bar_rect.min.y + BAR_HEIGHT));
+                .corner_radius(PANEL_CORNER_RADIUS)
+                .paint_at(ui, bar_rect.with_max_y(bar_rect.min.y + PANEL_HEIGHT));
 
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
+                            ui.style_mut().spacing.item_spacing.x = 2.0;
                             self.file_menu(ui);
                             self.playback_menu(ui);
+                            self.settings_menu(ui);
                         });
 
                         ui.with_layout(Layout::left_to_right(egui::Align::Max), |ui| {
@@ -73,29 +82,40 @@ impl MidiFlipperApp {
 
                     ui.separator();
 
-                    ui.add(GlobalControls::new(&mut self.session));
+                    ScrollArea::horizontal()
+                        .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                        .on_drag_cursor(CursorIcon::Grabbing)
+                        .on_hover_cursor(CursorIcon::Grab)
+                        .show(ui, |ui| {
+                            ui.set_width(550.0);
 
-                    ui.separator();
+                            ui.add(GlobalControls::new(&mut self.session));
 
-                    ui.vertical(|ui| {
-                        ui.label("Master Volume");
+                            ui.separator();
 
-                        let state_id = ui.id().with("tracks_timeline_state");
+                            ui.vertical(|ui| {
+                                ui.add(Label::new("Master Volume").selectable(false));
 
-                        let mut volume = self.master_volume();
-                        let mut use_big_range =
-                            ui.data_mut(|d| d.get_temp::<bool>(state_id).unwrap_or_default());
+                                let state_id = ui.id().with("tracks_timeline_state");
 
-                        ui.horizontal(|ui| {
-                            let loud_changed = ui.checkbox(&mut use_big_range, "⚠ Loud").changed();
-                            let range = if use_big_range { 0.0..=10.0 } else { 0.0..=1.5 };
-                            if ui.add(Slider::new(&mut volume, range)).changed() || loud_changed {
-                                self.set_master_volume(volume);
-                            }
+                                let mut volume = self.master_volume();
+                                let mut use_big_range = ui
+                                    .data_mut(|d| d.get_temp::<bool>(state_id).unwrap_or_default());
+
+                                ui.horizontal(|ui| {
+                                    let loud_changed =
+                                        ui.checkbox(&mut use_big_range, "⚠Loud").changed();
+                                    let range = if use_big_range { 0.0..=10.0 } else { 0.0..=1.5 };
+                                    if ui.add(Slider::new(&mut volume, range)).changed()
+                                        || loud_changed
+                                    {
+                                        self.set_master_volume(volume);
+                                    }
+                                });
+
+                                ui.data_mut(|d| d.insert_temp(state_id, use_big_range));
+                            });
                         });
-
-                        ui.data_mut(|d| d.insert_temp(state_id, use_big_range));
-                    });
                 });
             })
             .response
@@ -204,6 +224,12 @@ impl MidiFlipperApp {
             if ui.radio(has_custom_sf, custom_sf_label).clicked() {
                 self.prompt_open_soundfont();
             };
+        });
+    }
+
+    fn settings_menu(&mut self, ui: &mut Ui) {
+        ui.menu_button("Settings", |ui| {
+            ui.checkbox(&mut self.settings.border, "Wood");
         });
     }
 }

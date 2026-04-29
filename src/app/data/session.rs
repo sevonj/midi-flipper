@@ -258,6 +258,11 @@ impl Session {
         self.synth.position()
     }
 
+    #[allow(dead_code)]
+    pub fn playback_volume(&mut self) -> f32 {
+        self.synth.volume()
+    }
+
     pub fn set_playback_volume(&mut self, volume: f32) {
         self.synth.set_volume(volume)
     }

@@ -27,6 +27,7 @@ use rfd::FileDialog;
 use rustysynth::SoundFont;
 
 use crate::MidiFlipperError;
+use crate::app::data::AppSettings;
 use crate::app::data::Session;
 use crate::app::widgets::LogView;
 use crate::app::widgets::Timeline;
@@ -56,8 +57,7 @@ pub struct MidiFlipperApp {
     start: Instant,
     splash_done: bool,
     session_init: bool,
-    custom_soundfont: Option<Arc<SoundFont>>,
-    master_volume: f32,
+    settings: AppSettings,
 }
 
 impl Default for MidiFlipperApp {
@@ -71,8 +71,7 @@ impl Default for MidiFlipperApp {
             start: Instant::now(),
             splash_done: false,
             session_init: false,
-            custom_soundfont: None,
-            master_volume: 1.0,
+            settings: Default::default(),
         };
         this.log_text(String::from("Hello there!"));
         this
@@ -81,11 +80,11 @@ impl Default for MidiFlipperApp {
 
 impl MidiFlipperApp {
     pub const fn master_volume(&self) -> f32 {
-        self.master_volume
+        self.settings.master_volume
     }
 
     pub fn set_master_volume(&mut self, master_volume: f32) {
-        self.master_volume = master_volume;
+        self.settings.master_volume = master_volume;
         self.session.set_playback_volume(master_volume);
     }
 
@@ -109,36 +108,38 @@ impl MidiFlipperApp {
     }
 
     pub fn try_open_midi(&mut self, file_path: PathBuf) {
+        if let Err(e) = self.open_midi(file_path) {
+            self.log_err(&e);
+            self.toast_err(e.to_string());
+        }
+    }
+
+    pub fn open_midi(&mut self, file_path: PathBuf) -> Result<(), MidiFlipperError> {
         self.log_text(format!("Opening {file_path:?}"));
         self.workdir = file_path.parent().map(|p| p.to_path_buf());
-
-        let mut session = match Session::from_file(file_path) {
-            Ok(session) => session,
-            Err(e) => {
-                self.log_err(&e);
-                self.toast_err(e.to_string());
-                return;
-            }
-        };
-        session.set_custom_soundfont(self.custom_soundfont.clone());
+        let mut session = Session::from_file(file_path)?;
+        session.set_custom_soundfont(self.settings.custom_soundfont.clone());
         self.session_init = false;
+        session.set_playback_volume(self.settings.master_volume);
         self.session = session;
+        Ok(())
     }
 
     pub fn try_open_soundfont(&mut self, file_path: PathBuf) {
-        self.log_text(format!("Opening {file_path:?}"));
-
-        match std::fs::File::open(file_path) {
-            Ok(file) => match rustysynth::SoundFont::new(&mut std::io::BufReader::new(file)) {
-                Ok(soundfont) => {
-                    let sf_name = soundfont.get_info().get_bank_name().to_string();
-                    self.set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
-                    self.log_text(format!("Loaded soundfont: {sf_name:?}"));
-                }
-                Err(e) => self.log_text(e.to_string()),
-            },
-            Err(e) => self.log_text(e.to_string()),
+        if let Err(e) = self.open_soundfont(file_path) {
+            self.log_err(&e);
+            self.toast_err(e.to_string());
         }
+    }
+
+    pub fn open_soundfont(&mut self, file_path: PathBuf) -> Result<(), MidiFlipperError> {
+        self.log_text(format!("Opening {file_path:?}"));
+        let file = std::fs::File::open(file_path)?;
+        let soundfont = SoundFont::new(&mut std::io::BufReader::new(file))?;
+        let sf_name = soundfont.get_info().get_bank_name().to_string();
+        self.set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
+        self.log_text(format!("Loaded soundfont: {sf_name:?}"));
+        Ok(())
     }
 
     pub fn is_session_open(&self) -> bool {
@@ -150,11 +151,11 @@ impl MidiFlipperApp {
     }
 
     pub fn custom_soundfont(&self) -> &Option<Arc<SoundFont>> {
-        &self.custom_soundfont
+        &self.settings.custom_soundfont
     }
 
     pub fn set_custom_soundfont(&mut self, custom_soundfont: Option<Arc<SoundFont>>) {
-        self.custom_soundfont = custom_soundfont.clone();
+        self.settings.custom_soundfont = custom_soundfont.clone();
         self.session.set_custom_soundfont(custom_soundfont);
     }
 
@@ -248,11 +249,7 @@ impl MidiFlipperApp {
     }
 
     fn log_err(&mut self, e: &MidiFlipperError) {
-        let text = match e {
-            MidiFlipperError::Io(e) => e.to_string(),
-            MidiFlipperError::MidiParse(e) => e.to_string(),
-        };
-        self.log_text(text)
+        self.log_text(e.to_string())
     }
 
     fn log_text(&mut self, text: String) {
@@ -304,6 +301,11 @@ impl App for MidiFlipperApp {
 
         // --- Actual UI
         self.menu_bar(ui);
+        ui.add_space(1.0);
+
+        if self.settings.border {
+            self.border(ui);
+        }
 
         match self.tab {
             AppTab::Tracks => self.tab_tracks(ui),
@@ -334,5 +336,32 @@ impl App for MidiFlipperApp {
                 _ => (),
             };
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_volume_after_session_change() {
+        const VOL: f32 = 0.69;
+        let mut app = MidiFlipperApp::default();
+
+        app.set_master_volume(VOL);
+        assert_eq!(app.master_volume(), VOL);
+
+        app.open_midi(PathBuf::from("samples/icream.mid")).unwrap();
+        assert_eq!(app.master_volume(), VOL);
+        assert_eq!(app.session.playback_volume(), VOL);
+
+        app.open_midi(PathBuf::from("samples/icream.mid")).unwrap();
+        assert_eq!(app.master_volume(), VOL);
+        assert_eq!(app.session.playback_volume(), VOL);
+
+        app.close_session();
+        app.open_midi(PathBuf::from("samples/icream.mid")).unwrap();
+        assert_eq!(app.master_volume(), VOL);
+        assert_eq!(app.session.playback_volume(), VOL)
     }
 }

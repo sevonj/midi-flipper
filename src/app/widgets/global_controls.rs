@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use egui::Label;
 use egui::Widget;
 
 use crate::app::data::Session;
@@ -22,7 +23,7 @@ impl Widget for GlobalControls<'_> {
         }
 
         ui.vertical(|ui| {
-            ui.label("Transposition");
+            ui.add(Label::new("Transposition").selectable(false));
             let mut global_transpose = self.session.global_transpose();
             if ui
                 .add(TranspositionControl::new(&mut global_transpose))
@@ -35,7 +36,7 @@ impl Widget for GlobalControls<'_> {
         ui.separator();
 
         ui.vertical(|ui| {
-            ui.label("Misc.");
+            ui.add(Label::new("Misc").selectable(false));
             let mut flip_pitch_bend = self.session.flip_bend();
             if ui
                 .checkbox(&mut flip_pitch_bend, "Flip pitch bend")
