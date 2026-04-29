@@ -33,8 +33,9 @@ use crate::app::widgets::TrackView;
 
 const DEFAULT_ZOOM: f32 = 8.0;
 const TOP_HEIGHT: f32 = 24.0;
-const MIN_TRACK_HEIGHT: f32 = 32.0;
+const MIN_TRACK_HEIGHT: f32 = 24.0;
 const MAX_TRACK_HEIGHT: f32 = 128.0 * 8.0;
+const DEAULT_TRACK_HEIGHT: f32 = 64.0;
 
 #[derive(Debug, Clone)]
 struct TimelineState {
@@ -51,7 +52,7 @@ impl Default for TimelineState {
             time_zoom: DEFAULT_ZOOM,
             time_off: 0.0,
             scroll_off: 0.0,
-            track_height: MIN_TRACK_HEIGHT,
+            track_height: DEAULT_TRACK_HEIGHT,
             follow_playhead: true,
         }
     }
@@ -60,7 +61,7 @@ impl Default for TimelineState {
 impl TimelineState {
     pub fn reset_zoom(&mut self) {
         self.time_zoom = DEFAULT_ZOOM;
-        self.track_height = MIN_TRACK_HEIGHT;
+        self.track_height = DEAULT_TRACK_HEIGHT;
     }
 
     pub fn horizontal_zoom(

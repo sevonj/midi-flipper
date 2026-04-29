@@ -40,6 +40,7 @@ impl Widget for TrackView<'_> {
                 ui.horizontal(|ui| {
                     ui.set_height(height);
                     ui.set_width(ui.available_width());
+                    ui.style_mut().spacing.item_spacing.x = 0.0;
 
                     ui.horizontal_centered(|ui| {
                         ui.set_width(18.);
@@ -53,37 +54,28 @@ impl Widget for TrackView<'_> {
                         ui.spacing_mut().item_spacing = Vec2::splat(1.0);
                         ui.add_space(2.0);
 
-                        ui.add(
-                            Label::new(track_name(self.track))
-                                .wrap_mode(egui::TextWrapMode::Truncate),
-                        );
-
-                        if ui.available_height() >= 32.0 {
-                            ui.horizontal(|ui| {
-                                let flip_enabled = self.track.flip_enabled();
-                                if toggle_button(ui, flip_enabled, "F", "Flip Track").clicked() {
-                                    self.track.set_flip_enabled(!flip_enabled);
-                                }
-                                let ignore_ch10 = self.track.ignore_ch10();
-                                if toggle_button(
-                                    ui,
-                                    !ignore_ch10,
-                                    "Ch10",
-                                    "Flip Channel 10  (drums)",
-                                )
+                        ui.horizontal(|ui| {
+                            let flip_enabled = self.track.flip_enabled();
+                            if toggle_button(ui, flip_enabled, "F", "Flip Track").clicked() {
+                                self.track.set_flip_enabled(!flip_enabled);
+                            }
+                            let ignore_ch10 = self.track.ignore_ch10();
+                            if toggle_button(ui, !ignore_ch10, "Ch10", "Flip Channel 10  (drums)")
                                 .clicked()
-                                {
-                                    self.track.set_ignore_ch10(!ignore_ch10);
-                                }
-                            });
-                        }
+                            {
+                                self.track.set_ignore_ch10(!ignore_ch10);
+                            }
 
-                        if self.track.flip_enabled() && ui.available_height() >= 32.0 {
+                            ui.add(
+                                Label::new(track_name(self.track))
+                                    .wrap_mode(egui::TextWrapMode::Truncate),
+                            );
+                        });
+
+                        if self.track.flip_enabled() && ui.available_height() >= 20.0 {
                             ScrollArea::horizontal()
                                 .id_salt(("track", self.index))
                                 .show(ui, |ui| {
-                                    ui.set_height(ui.available_height());
-
                                     let mut transposition = self.track.transposition();
                                     if ui
                                         .add(TranspositionControl::new(&mut transposition))
