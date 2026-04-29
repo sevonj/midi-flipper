@@ -53,8 +53,8 @@ impl MidiFlipperApp {
                             Tab::value(
                                 ui,
                                 &mut self.tab,
-                                AppTab::Session,
-                                &AppTab::Session.to_string(),
+                                AppTab::Tracks,
+                                &AppTab::Tracks.to_string(),
                                 "tab_session",
                             );
                             Tab::value(

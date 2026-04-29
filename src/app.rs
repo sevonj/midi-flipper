@@ -34,14 +34,14 @@ use crate::app::widgets::Timeline;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 enum AppTab {
     #[default]
-    Session,
+    Tracks,
     Log,
 }
 
 impl std::fmt::Display for AppTab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AppTab::Session => write!(f, "Session"),
+            AppTab::Tracks => write!(f, "Tracks"),
             AppTab::Log => write!(f, "Log"),
         }
     }
@@ -265,7 +265,7 @@ impl MidiFlipperApp {
         self.log.push_back(text);
     }
 
-    fn tab_session(&mut self, ui: &mut Ui) {
+    fn tab_tracks(&mut self, ui: &mut Ui) {
         ui.add(Timeline::new(&mut self.session));
     }
 
@@ -309,7 +309,7 @@ impl App for MidiFlipperApp {
         self.menu_bar(ui);
 
         match self.tab {
-            AppTab::Session => self.tab_session(ui),
+            AppTab::Tracks => self.tab_tracks(ui),
             AppTab::Log => self.tab_log(ui),
         }
 
