@@ -251,9 +251,6 @@ impl MidiFlipperApp {
         let text = match e {
             MidiFlipperError::Io(e) => e.to_string(),
             MidiFlipperError::MidiParse(e) => e.to_string(),
-            MidiFlipperError::MidiValidationFailed => String::from(
-                "Output validation failed. Probably because of this: https://github.com/AlexCharlton/midi-msg/issues/32",
-            ),
         };
         self.log_text(text)
     }

@@ -47,11 +47,6 @@ pub struct Session {
 
 impl Session {
     pub fn new(name: String, midi_file: MidiFile) -> Result<Self, MidiFlipperError> {
-        let validate = MidiFile::from_midi(&midi_file.to_midi());
-        if validate.is_err() {
-            return Err(MidiFlipperError::MidiValidationFailed);
-        }
-
         let global_transpose = 0;
         let flip_bend = false;
 
