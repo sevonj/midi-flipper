@@ -32,7 +32,6 @@ impl Widget for TrackView<'_> {
         Frame::group(style)
             .inner_margin(0.)
             .outer_margin(0.)
-            .corner_radius(0.)
             .fill(weak_bg_fill)
             .show(ui, |ui| {
                 let height = ui.available_height();

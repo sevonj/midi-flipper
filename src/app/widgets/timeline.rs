@@ -165,7 +165,7 @@ impl Widget for Timeline<'_> {
             .show_inside(ui, |ui| {
                 Panel::left("track_controls")
                     .min_size(220.0)
-                    .frame(Frame::NONE.fill(weak_bg_fill))
+                    .frame(Frame::NONE.fill(weak_bg_fill).corner_radius(1.))
                     .show_inside(ui, |ui| {
                         let item_spacing = ui.style().spacing.item_spacing;
                         ui.style_mut().spacing.item_spacing = Vec2::splat(0.0);
@@ -173,7 +173,8 @@ impl Widget for Timeline<'_> {
                         Frame::group(&style)
                             .inner_margin(0.)
                             .outer_margin(0.)
-                            .corner_radius(0.)
+                            .fill(weak_bg_fill)
+                            .corner_radius(1.)
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
                                     ui.set_height(TOP_HEIGHT);
