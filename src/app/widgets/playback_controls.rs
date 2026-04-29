@@ -6,12 +6,15 @@ use egui::Frame;
 use egui::Image;
 use egui::Label;
 use egui::Layout;
+use egui::Rect;
 use egui::RichText;
 use egui::Sense;
 use egui::UiBuilder;
 use egui::Vec2;
 use egui::Widget;
 use egui::include_image;
+use egui::pos2;
+use egui::vec2;
 
 use crate::app::data::Session;
 use crate::util::format_duration;
@@ -137,15 +140,18 @@ impl Widget for PlaybackControls<'_> {
                                 };
 
                                 Frame::new()
-                                    .inner_margin(2.0)
+                                    .outer_margin(1)
                                     .fill(fill)
-                                    .corner_radius(4.0)
+                                    .corner_radius(3.0)
                                     .show(ui, |ui| {
                                         ui.set_height(ui.available_height());
 
                                         ui.horizontal(|ui| {
+                                            ui.set_height(ui.available_height());
                                             ui.spacing_mut().item_spacing.y = 0.0;
                                             ui.spacing_mut().item_spacing.x = 2.0;
+
+                                            ui.add_space(2.0);
 
                                             ui.vertical(|ui| {
                                                 let style = ui.style();
@@ -161,7 +167,7 @@ impl Widget for PlaybackControls<'_> {
                                                     .outer_margin(0.)
                                                     .corner_radius(2.);
 
-                                                ui.add_space(1.0);
+                                                ui.add_space(2.0);
 
                                                 if session.playback_original() {
                                                     frame_weak.show(ui, |ui| {
@@ -203,9 +209,19 @@ impl Widget for PlaybackControls<'_> {
                                                     });
                                                 }
                                             });
-                                            ui.image(include_image!(
+
+                                            let img_x = ui.next_widget_position().x;
+                                            ui.add_space(32.0);
+
+                                            let img_pos = pos2(img_x, 0.0);
+
+                                            Image::from(include_image!(
                                                 "../../../assets/icon_flipswap.svg"
-                                            ));
+                                            ))
+                                            .paint_at(
+                                                ui,
+                                                Rect::from_min_size(img_pos, vec2(32.0, 48.0)),
+                                            );
                                         });
                                     });
                             },
