@@ -3,6 +3,7 @@
 use egui::Button;
 use egui::Color32;
 use egui::Frame;
+use egui::Image;
 use egui::Layout;
 use egui::Panel;
 use egui::Slider;
@@ -21,19 +22,25 @@ use crate::app::widgets::GlobalControls;
 use crate::app::widgets::PlaybackControls;
 use crate::app::widgets::Tab;
 
+const BAR_HEIGHT: f32 = 48.0;
+
 impl MidiFlipperApp {
     pub(crate) fn menu_bar(&mut self, ui: &mut Ui) -> egui::Response {
         Panel::top("menu_bar")
             .resizable(false)
-            .exact_size(48.0)
+            .exact_size(BAR_HEIGHT)
             .show_separator_line(false)
             .frame(
                 Frame::default()
                     .inner_margin(vec2(8., 2.))
-                    .fill(Color32::from_hex("#525252").unwrap()),
+                    .fill(Color32::from_hex("#4a4a4a").unwrap()),
             )
             .show_inside(ui, |ui| {
-                ui.set_height(ui.available_height());
+                let bar_rect = ui.content_rect();
+                Image::from(egui::include_image!(
+                    "../../../assets/tex_toolbar_gradient.svg"
+                ))
+                .paint_at(ui, bar_rect.with_max_y(bar_rect.min.y + BAR_HEIGHT));
 
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {

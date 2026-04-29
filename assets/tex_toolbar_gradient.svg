@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 8.4666665 8.4666666"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="tex_toolbar_gradient.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#525252"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#393939"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:zoom="7.319248"
+     inkscape:cx="51.098145"
+     inkscape:cy="23.772934"
+     inkscape:window-width="2560"
+     inkscape:window-height="1368"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient424">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0.1;"
+         offset="0"
+         id="stop420" />
+      <stop
+         style="stop-color:#000000;stop-opacity:0.1;"
+         offset="1"
+         id="stop422" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient424"
+       id="linearGradient426"
+       x1="0"
+       y1="0"
+       x2="0"
+       y2="8.4666672"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:url(#linearGradient426);stroke-width:0.529167;stroke-dashoffset:79.54;stroke-opacity:0.502913;fill-opacity:1"
+       id="rect418"
+       width="8.4666662"
+       height="8.4666672"
+       x="0"
+       y="0"
+       ry="0.0530039" />
+  </g>
+</svg>
