@@ -81,7 +81,7 @@ impl MidiFlipperApp {
 
                         ui.horizontal(|ui| {
                             let loud_changed = ui.checkbox(&mut use_big_range, "⚠ Loud").changed();
-                            let range = if use_big_range { 0.0..=10.0 } else { 0.0..=2.0 };
+                            let range = if use_big_range { 0.0..=10.0 } else { 0.0..=1.5 };
                             if ui.add(Slider::new(&mut volume, range)).changed() || loud_changed {
                                 self.set_master_volume(volume);
                             }
