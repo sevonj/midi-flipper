@@ -4,6 +4,7 @@ use egui::Button;
 use egui::Frame;
 use egui::Label;
 use egui::RichText;
+use egui::ScrollArea;
 use egui::Vec2;
 use egui::Widget;
 
@@ -57,29 +58,40 @@ impl Widget for TrackView<'_> {
                                 .wrap_mode(egui::TextWrapMode::Truncate),
                         );
 
-                        ui.horizontal(|ui| {
-                            let flip_enabled = self.track.flip_enabled();
-                            if toggle_button(ui, flip_enabled, "F", "Flip Track").clicked() {
-                                self.track.set_flip_enabled(!flip_enabled);
-                            }
-                            let ignore_ch10 = self.track.ignore_ch10();
-                            if toggle_button(ui, !ignore_ch10, "Ch10", "Flip Channel 10  (drums)")
+                        if ui.available_height() >= 32.0 {
+                            ui.horizontal(|ui| {
+                                let flip_enabled = self.track.flip_enabled();
+                                if toggle_button(ui, flip_enabled, "F", "Flip Track").clicked() {
+                                    self.track.set_flip_enabled(!flip_enabled);
+                                }
+                                let ignore_ch10 = self.track.ignore_ch10();
+                                if toggle_button(
+                                    ui,
+                                    !ignore_ch10,
+                                    "Ch10",
+                                    "Flip Channel 10  (drums)",
+                                )
                                 .clicked()
-                            {
-                                self.track.set_ignore_ch10(!ignore_ch10);
-                            }
-                        });
+                                {
+                                    self.track.set_ignore_ch10(!ignore_ch10);
+                                }
+                            });
+                        }
 
-                        ui.separator();
+                        if self.track.flip_enabled() && ui.available_height() >= 32.0 {
+                            ScrollArea::horizontal()
+                                .id_salt(("track", self.index))
+                                .show(ui, |ui| {
+                                    ui.set_height(ui.available_height());
 
-                        if self.track.flip_enabled() {
-                            let mut transposition = self.track.transposition();
-                            if ui
-                                .add(TranspositionControl::new(&mut transposition))
-                                .changed()
-                            {
-                                self.track.set_transposition(transposition);
-                            }
+                                    let mut transposition = self.track.transposition();
+                                    if ui
+                                        .add(TranspositionControl::new(&mut transposition))
+                                        .changed()
+                                    {
+                                        self.track.set_transposition(transposition);
+                                    }
+                                });
                         }
                     });
                 })

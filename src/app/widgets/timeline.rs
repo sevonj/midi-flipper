@@ -33,7 +33,7 @@ use crate::app::widgets::TrackView;
 
 const DEFAULT_ZOOM: f32 = 8.0;
 const TOP_HEIGHT: f32 = 24.0;
-const MIN_TRACK_HEIGHT: f32 = 76.0;
+const MIN_TRACK_HEIGHT: f32 = 32.0;
 const MAX_TRACK_HEIGHT: f32 = 128.0 * 8.0;
 
 #[derive(Debug, Clone)]
