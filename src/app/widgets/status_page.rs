@@ -14,7 +14,10 @@ impl<'a> StatusPage<'a> {
     }
 
     pub fn status_nothing_open() -> Self {
-        Self::new("Nothing Open", "Open a midi file from the file menu.")
+        Self::new(
+            "Nothing Open",
+            "Open a midi file from the file menu or drop a file here.",
+        )
     }
 }
 
