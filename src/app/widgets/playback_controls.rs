@@ -17,6 +17,7 @@ use egui::pos2;
 use egui::vec2;
 
 use crate::app::data::Session;
+use crate::app::shortcuts::SHORTCUT_PLAYBACK_TOGGLE_FLIP;
 use crate::util::format_duration;
 
 pub struct PlaybackControls<'a> {
@@ -229,12 +230,17 @@ impl Widget for PlaybackControls<'_> {
                         .response;
 
                     flipbox_response = if session.playback_original() {
-                        flipbox_response.on_hover_text("Switch to flipped")
+                        flipbox_response.on_hover_text("Switch to flipped (F)")
                     } else {
-                        flipbox_response.on_hover_text("Switch to original")
+                        flipbox_response.on_hover_text("Switch to original (F)")
                     };
 
-                    if flipbox_response.clicked() {
+                    if ui.is_enabled()
+                        && (flipbox_response.clicked()
+                            || ui.input_mut(|input| {
+                                input.consume_shortcut(&SHORTCUT_PLAYBACK_TOGGLE_FLIP)
+                            }))
+                    {
                         session.set_playback_original(!session.playback_original());
                     }
                 })

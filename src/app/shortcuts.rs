@@ -25,6 +25,7 @@ pub const SHORTCUT_VP_START_ALT: SCut = SCut::new(NONE, Key::Home);
 
 pub const SHORTCUT_PLAYBACK_PLAYSTOP: SCut = SCut::new(NONE, Key::Space);
 pub const SHORTCUT_PLAYBACK_PAUSE: SCut = SCut::new(COMMAND, Key::Space);
+pub const SHORTCUT_PLAYBACK_TOGGLE_FLIP: SCut = SCut::new(NONE, Key::F);
 
 impl MidiFlipperApp {
     pub(crate) fn consume_shortcuts(&mut self, ui: &mut Ui) {
