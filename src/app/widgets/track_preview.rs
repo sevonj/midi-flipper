@@ -8,6 +8,7 @@ use egui::Stroke;
 use egui::Vec2;
 use egui::Widget;
 
+use crate::app::data::PaintableNote;
 use crate::app::data::SessionTrack;
 
 pub struct TrackPreview<'a> {
@@ -60,27 +61,29 @@ impl Widget for TrackPreview<'_> {
             } else {
                 (stroke_note_disabled, stroke_note)
             };
-
             for note in self.track.track_original().paint_cache() {
-                let a = self.paint_position + note.points()[0] * self.paint_scale;
-                let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a.round(), b.round()], stroke_og);
+                painter.line(self.points(note), stroke_og);
             }
-
             for note in self.track.track_flipped().paint_cache() {
-                let a = self.paint_position + note.points()[0] * self.paint_scale;
-                let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a.round(), b.round()], stroke_flip);
+                painter.line(self.points(note), stroke_flip);
             }
         } else {
             for note in self.track.track_original().paint_cache() {
-                let a = self.paint_position + note.points()[0] * self.paint_scale;
-                let b = self.paint_position + note.points()[1] * self.paint_scale;
-                painter.line(vec![a.round(), b.round()], stroke_note);
+                painter.line(self.points(note), stroke_note);
             }
         }
 
         ui.response()
+    }
+}
+
+impl TrackPreview<'_> {
+    fn points(&self, note: &PaintableNote) -> Vec<Pos2> {
+        let a = (self.paint_position + note.points()[0] * self.paint_scale).round();
+        let mut b = (self.paint_position + note.points()[1] * self.paint_scale).round();
+        b.x = b.x.max(a.x + 1.0);
+        let points = vec![a, b];
+        points
     }
 }
 
