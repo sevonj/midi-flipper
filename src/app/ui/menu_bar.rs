@@ -159,6 +159,12 @@ impl MidiFlipperApp {
 
             ui.separator();
 
+            if ui.button("About").clicked() {
+                self.show_about = true;
+            }
+
+            ui.separator();
+
             if ui
                 .add(Button::new("Quit").shortcut_text(ui.ctx().format_shortcut(&SHORTCUT_QUIT)))
                 .clicked()

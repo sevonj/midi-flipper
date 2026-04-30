@@ -3,6 +3,7 @@ name = "midi_flipper"
 version = "0.4.5"
 edition = "2024"
 license = "AGPL-3.0-or-later"
+repository = "https://github.com/sevonj/midi-flipper"
 
 [features]
 # Running code in CI (tests)

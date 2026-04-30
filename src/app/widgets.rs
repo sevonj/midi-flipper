@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+mod action_row;
 mod global_controls;
 mod log_view;
 mod playback_controls;
@@ -10,6 +11,7 @@ mod track_preview;
 mod track_view;
 mod transposition_control;
 
+pub use action_row::ActionRow;
 pub use global_controls::GlobalControls;
 pub use log_view::LogView;
 pub use playback_controls::PlaybackControls;

@@ -57,6 +57,7 @@ pub struct MidiFlipperApp {
     start: Instant,
     splash_done: bool,
     session_init: bool,
+    show_about: bool,
     settings: AppSettings,
 }
 
@@ -71,6 +72,7 @@ impl Default for MidiFlipperApp {
             start: Instant::now(),
             splash_done: false,
             session_init: false,
+            show_about: false,
             settings: Default::default(),
         };
         this.log_text(String::from("Hello there!"));
@@ -312,6 +314,10 @@ impl App for MidiFlipperApp {
         match self.tab {
             AppTab::Tracks => self.tab_tracks(ui),
             AppTab::Log => self.tab_log(ui),
+        }
+
+        if self.show_about {
+            self.about_dialog(ui);
         }
 
         self.consume_shortcuts(ui);
