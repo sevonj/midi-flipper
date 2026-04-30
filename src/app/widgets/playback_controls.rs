@@ -158,13 +158,13 @@ impl Widget for PlaybackControls<'_> {
                                                 let style = ui.style();
 
                                                 let frame_weak = Frame::new()
-                                                    .inner_margin(2.)
+                                                    .inner_margin(3.)
                                                     .outer_margin(0.)
                                                     .corner_radius(2.);
 
                                                 let frame_stronk = Frame::new()
                                                     .fill(style.visuals.selection.bg_fill)
-                                                    .inner_margin(2.)
+                                                    .inner_margin(3.)
                                                     .outer_margin(0.)
                                                     .corner_radius(2.);
 

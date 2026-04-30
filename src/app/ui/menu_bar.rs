@@ -103,8 +103,10 @@ impl MidiFlipperApp {
                                     .data_mut(|d| d.get_temp::<bool>(state_id).unwrap_or_default());
 
                                 ui.horizontal(|ui| {
-                                    let loud_changed =
-                                        ui.checkbox(&mut use_big_range, "⚠Loud").changed();
+                                    let loud_changed = ui
+                                        .checkbox(&mut use_big_range, "Loud")
+                                        .on_hover_text("Increase slider range.")
+                                        .changed();
                                     let range = if use_big_range { 0.0..=10.0 } else { 0.0..=1.5 };
                                     if ui.add(Slider::new(&mut volume, range)).changed()
                                         || loud_changed

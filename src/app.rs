@@ -89,6 +89,8 @@ impl MidiFlipperApp {
     }
 
     pub fn new(cc: &CreationContext<'_>) -> Self {
+        cc.egui_ctx
+            .set_fonts(epaint_ubuntu_fonts::font_definitions());
         cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
         Default::default()
     }

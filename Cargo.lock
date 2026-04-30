@@ -1249,7 +1249,6 @@ dependencies = [
  "bytemuck",
  "ecolor",
  "emath",
- "epaint_default_fonts",
  "font-types",
  "log",
  "nohash-hasher",
@@ -1262,10 +1261,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "epaint_default_fonts"
-version = "0.34.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3b85a2bb775a3ab02d077a65cc31575c11b2584581913253cc11ce49f48bba"
+name = "epaint_ubuntu_fonts"
+version = "0.1.0"
+source = "git+https://github.com/sevonj/epaint-ubuntu-fonts.git?tag=v0.1.0#f7e98bc7a693f59a8ddbc9287cc9913014cb5123"
+dependencies = [
+ "egui",
+]
 
 [[package]]
 name = "equator"
@@ -2288,11 +2289,13 @@ dependencies = [
  "egui",
  "egui-toast",
  "egui_extras",
+ "epaint_ubuntu_fonts",
  "image",
  "midi-msg",
  "rfd",
  "rodio",
  "rustysynth",
+ "winit",
 ]
 
 [[package]]
@@ -4157,10 +4160,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.2",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.4",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4347,7 +4350,7 @@ checksum = "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e"
 dependencies = [
  "memoffset",
  "tempfile",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

@@ -15,6 +15,7 @@ use egui::Stroke;
 use egui::UiBuilder;
 use egui::Vec2;
 use egui::Widget;
+use egui::containers::menu::MenuButton;
 use egui::include_image;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::vec2;
@@ -182,7 +183,13 @@ impl Widget for Timeline<'_> {
                                     ui.style_mut().spacing.item_spacing = item_spacing;
                                     ui.add_space(2.0);
 
-                                    ui.menu_button("ℹ", |ui| {
+                                    MenuButton::from_button(
+                                        Button::image(include_image!(
+                                            "../../../assets/icon_info.svg"
+                                        ))
+                                        .image_tint_follows_text_color(true),
+                                    )
+                                    .ui(ui, |ui| {
                                         timeline_help_ui(ui);
                                     });
 
