@@ -5,6 +5,7 @@ mod midisource;
 mod midisynth;
 
 use midi_msg::MidiFile;
+#[cfg(not(feature = "ci"))]
 use rodio::MixerDeviceSink;
 use rodio::Player;
 use rustysynth::SoundFont;
@@ -12,6 +13,7 @@ use std::io::BufReader;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(not(feature = "ci"))]
 pub use midisource::MidiSource;
 
 use crate::crustysynth::midisequencer::MidiSequencer;
@@ -21,6 +23,7 @@ const DEFAULT_SOUNDFONT: &[u8] = include_bytes!("../assets/__Florestan_Basic_GM_
 pub struct CrustySynth {
     soundfont: Arc<SoundFont>,
     midi_file: Option<(Arc<MidiFile>, Duration)>,
+    #[cfg(not(feature = "ci"))]
     sink_handle: MixerDeviceSink,
     player: Option<Player>,
     volume: f32,
@@ -28,12 +31,14 @@ pub struct CrustySynth {
 
 impl Default for CrustySynth {
     fn default() -> Self {
+        #[cfg(not(feature = "ci"))]
         let sink_handle =
             rodio::DeviceSinkBuilder::open_default_sink().expect("Couldn't open sink");
 
         Self {
             soundfont: Self::default_soundfont(),
             midi_file: None,
+            #[cfg(not(feature = "ci"))]
             sink_handle,
             player: None,
             volume: 1.0,
@@ -67,10 +72,10 @@ impl CrustySynth {
 
     // Swap on the fly, attempt to keep playback state
     pub fn swap_midi_file(&mut self, midi_file: Arc<MidiFile>) {
+        #[cfg(not(feature = "ci"))]
         if let Some(old) = self.player.take() {
             let paused = old.is_paused();
             let pos = old.get_pos();
-            drop(old);
 
             let new = Player::connect_new(self.sink_handle.mixer());
             let source = MidiSource::new(&self.soundfont, &midi_file);
@@ -136,17 +141,20 @@ impl CrustySynth {
     }
 
     pub fn start(&mut self) {
-        self.stop();
-        let Some(midi_file) = self.midi_file() else {
-            return;
-        };
+        #[cfg(not(feature = "ci"))]
+        {
+            self.stop();
+            let Some(midi_file) = self.midi_file() else {
+                return;
+            };
 
-        let player = Player::connect_new(self.sink_handle.mixer());
-        player.set_volume(self.volume);
-        let source = MidiSource::new(&self.soundfont, midi_file);
-        player.append(source);
-        player.play();
-        self.player = Some(player)
+            let player = Player::connect_new(self.sink_handle.mixer());
+            player.set_volume(self.volume);
+            let source = MidiSource::new(&self.soundfont, midi_file);
+            player.append(source);
+            player.play();
+            self.player = Some(player)
+        }
     }
 
     pub fn play(&mut self) {

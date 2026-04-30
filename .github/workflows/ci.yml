@@ -28,6 +28,6 @@ jobs:
     - name: Build Windows
       run: cargo build --verbose --target=x86_64-pc-windows-gnu
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --features=ci
     - name: Clippy
       run: cargo clippy --no-deps --  --deny warnings

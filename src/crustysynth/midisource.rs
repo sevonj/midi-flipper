@@ -29,6 +29,7 @@ pub struct MidiSource {
 
 impl MidiSource {
     /// New `MidiSource` that immediately starts playing.
+    #[allow(dead_code)]
     pub fn new(sf: &Arc<SoundFont>, midi_file: &Arc<MidiFile>) -> Self {
         Self::with_sample_rate(sf, midi_file, Self::DEFAULT_SAMPLE_RATE)
     }
