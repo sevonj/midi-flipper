@@ -160,7 +160,7 @@ impl MidiFlipperApp {
             ui.separator();
 
             if ui.button("About").clicked() {
-                self.show_about = true;
+                self.modal_state.show_about = true;
             }
 
             ui.separator();

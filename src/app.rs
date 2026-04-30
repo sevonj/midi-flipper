@@ -48,6 +48,12 @@ impl std::fmt::Display for AppTab {
     }
 }
 
+#[derive(Default, Debug)]
+struct ModalState {
+    pub show_about: bool,
+    pub show_about_legal: bool,
+}
+
 pub struct MidiFlipperApp {
     workdir: Option<PathBuf>,
     session: Session,
@@ -57,7 +63,7 @@ pub struct MidiFlipperApp {
     start: Instant,
     splash_done: bool,
     session_init: bool,
-    show_about: bool,
+    modal_state: ModalState,
     settings: AppSettings,
 }
 
@@ -72,7 +78,7 @@ impl Default for MidiFlipperApp {
             start: Instant::now(),
             splash_done: false,
             session_init: false,
-            show_about: false,
+            modal_state: Default::default(),
             settings: Default::default(),
         };
         this.log_text(String::from("Hello there!"));
@@ -316,8 +322,11 @@ impl App for MidiFlipperApp {
             AppTab::Log => self.tab_log(ui),
         }
 
-        if self.show_about {
+        if self.modal_state.show_about {
             self.about_dialog(ui);
+        }
+        if self.modal_state.show_about_legal {
+            self.about_legal_dialog(ui);
         }
 
         self.consume_shortcuts(ui);
