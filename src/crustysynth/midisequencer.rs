@@ -1,296 +1,202 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use midi_msg::{ChannelVoiceMsg, Division, Meta, MidiFile, MidiMsg, TimeCodeType, TrackEvent};
-use std::{fmt::Display, sync::Arc, time::Duration};
+use midi_msg::ChannelVoiceMsg;
+use midi_msg::Division;
+use midi_msg::Header;
+use midi_msg::Meta;
+use midi_msg::MidiFile;
+use midi_msg::MidiMsg;
+use midi_msg::TimeCodeType;
+use std::time::Duration;
 
-/// Ability to receive messages
+use crate::crustysynth::midi_region::MidiEvent;
+use crate::crustysynth::midi_region::MidiRegion;
+
 pub trait MidiSink {
-    /// Returns Err if event couldn't be used.
-    fn receive_midi(&mut self, msg: &MidiMsg) -> Result<(), ()>;
+    fn receive_midi(&mut self, msg: &MidiMsg);
     fn reset(&mut self);
 }
 
-/// [`TrackEvent`] wrapper with some context for debugging.
-struct TrackEventWrap {
-    pub track_event: TrackEvent,
-    pub track_idx: usize,
-    pub event_idx: usize,
-}
-impl Display for TrackEventWrap {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let trk = self.track_idx;
-        let ev = self.event_idx;
-        let event = &self.track_event.event;
-        let raw = event.to_midi();
-        write!(f, "T{trk}/E{ev} raw: {raw:02X?}, event: {event:?}")
-    }
-}
+pub type SeqTrackInfo = (usize, MidiRegion);
 
-/// MIDI Sequencer
 pub struct MidiSequencer {
-    midifile: Option<Arc<MidiFile>>,
-    bpm: f64,
-    /// Index of next event for each track
-    track_positions: Vec<usize>,
-    /// Song position
-    tick: usize,
-    since_last_tick: Duration,
-    song_len: Duration,
-    song_pos: Duration,
+    tracks: Vec<SeqTrackInfo>,
+    song_duration: Duration,
+    song_position: Duration,
 }
 impl MidiSequencer {
-    pub const fn new() -> Self {
+    pub fn new(midi_file: &MidiFile) -> Self {
+        let tracks: Vec<SeqTrackInfo> = generate_absolute_tracks(midi_file)
+            .iter()
+            .map(|events| (0, MidiRegion::new(events.clone())))
+            .collect();
+
+        let song_duration = tracks
+            .iter()
+            .map(|(_, region)| region.duration())
+            .max()
+            .unwrap_or(Duration::ZERO);
+
         Self {
-            midifile: None,
-            bpm: 120.,
-            track_positions: vec![],
-            tick: 0,
-            since_last_tick: Duration::ZERO,
-            song_len: Duration::ZERO,
-            song_pos: Duration::ZERO,
+            tracks,
+            song_duration,
+            song_position: Duration::ZERO,
         }
     }
 
-    /// Are there no more messages left?
     pub fn end_of_sequence(&self) -> bool {
-        let Some(midifile) = &self.midifile else {
-            return true;
-        };
-        for (i, track) in midifile.tracks.iter().enumerate() {
-            if self.track_positions[i] < track.events().len() {
-                return false;
-            }
-        }
-        true
-    }
-
-    pub fn play(&mut self, midi_file: &Arc<MidiFile>) {
-        self.tick = 0;
-        self.track_positions = vec![0; midi_file.tracks.len()];
-        self.midifile = Some(midi_file.clone());
-
-        self.update_song_length();
+        self.song_position > self.song_duration
     }
 
     pub fn update_events<R>(&mut self, event_sink: &mut R, delta_t: Duration)
     where
         R: MidiSink,
     {
-        let Some(events) = self.events() else {
-            return;
-        };
+        self.song_position += delta_t;
 
-        self.song_pos += delta_t;
-        self.since_last_tick += delta_t;
-        let tick_duration = self.current_tick_duration();
-        if self.since_last_tick >= tick_duration {
-            self.since_last_tick -= tick_duration;
-            self.tick += 1;
-        }
-
-        for wrap in events {
-            match wrap.track_event.event {
-                MidiMsg::ChannelVoice { .. }
-                | MidiMsg::RunningChannelVoice { .. }
-                | MidiMsg::ChannelMode { .. }
-                | MidiMsg::RunningChannelMode { .. }
-                    if event_sink.receive_midi(&wrap.track_event.event).is_err() =>
-                {
-                    println!("Unhandled: {wrap}");
-                }
-
-                midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
-                _ => (),
-            }
+        while let Some(event) = self.next_event() {
+            event_sink.receive_midi(&event.msg);
         }
     }
 
-    /// For seeking. Ignore `NoteOn`.
-    fn update_events_quiet<R>(&mut self, event_sink: &mut R)
+    pub fn update_events_quiet<R>(&mut self, event_sink: &mut R, delta_t: Duration)
     where
         R: MidiSink,
     {
-        let Some(events) = self.events() else {
-            return;
-        };
+        self.song_position += delta_t;
 
-        self.song_pos += self.current_tick_duration();
-        self.tick += 1;
-
-        for wrap in events {
-            match wrap.track_event.event {
-                MidiMsg::ChannelVoice { msg, .. } | MidiMsg::RunningChannelVoice { msg, .. } => {
-                    match msg {
-                        ChannelVoiceMsg::NoteOn { .. } | ChannelVoiceMsg::HighResNoteOn { .. } => {}
-                        _ => {
-                            let _ = event_sink.receive_midi(&wrap.track_event.event);
-                        }
-                    }
+        while let Some(event) = self.next_event() {
+            fn is_note_on(event: &MidiMsg) -> bool {
+                match event {
+                    MidiMsg::ChannelVoice { msg, .. }
+                    | MidiMsg::RunningChannelVoice { msg, .. } => match msg {
+                        ChannelVoiceMsg::NoteOn { velocity, .. } => *velocity != 0,
+                        ChannelVoiceMsg::HighResNoteOn { velocity, .. } => *velocity != 0,
+                        _ => false,
+                    },
+                    _ => false,
                 }
-                MidiMsg::ChannelMode { .. } | MidiMsg::RunningChannelMode { .. } => {
-                    let _ = event_sink.receive_midi(&wrap.track_event.event);
-                }
-                midi_msg::MidiMsg::Meta { msg } => self.handle_meta_event(&msg),
-                _ => (),
             }
+
+            if is_note_on(&event.msg) {
+                continue;
+            }
+
+            event_sink.receive_midi(&event.msg);
         }
     }
 
-    fn events(&mut self) -> Option<Vec<TrackEventWrap>> {
-        let Some(midifile) = &self.midifile else {
-            return None;
-        };
-
-        let mut events = vec![];
-        for (track_idx, track) in midifile.tracks.iter().enumerate() {
-            loop {
-                let event_idx = self.track_positions[track_idx];
-                if event_idx >= track.len() {
-                    break;
-                }
-                let event = &track.events()[event_idx];
-                let event_tick = midifile
-                    .header
-                    .division
-                    .beat_or_frame_to_tick(event.beat_or_frame)
-                    as usize;
-                if self.tick >= event_tick {
-                    events.push(TrackEventWrap {
-                        track_event: event.clone(),
-                        track_idx,
-                        event_idx: self.track_positions[track_idx],
-                    });
-                    if self.tick > event_tick {
-                        let late = self.tick - event_tick;
-                        println!(
-                            "Somehow an event was missed! Playing it late ({late} ticks). {event:?}"
-                        );
-                    }
-                    self.track_positions[track_idx] += 1;
-                } else {
-                    break;
-                }
+    fn next_event(&mut self) -> Option<&MidiEvent> {
+        for (track_pos, region) in &mut self.tracks {
+            if *track_pos >= region.events().len() {
+                continue;
+            }
+            let event = &region.events()[*track_pos];
+            if self.song_position >= event.time {
+                *track_pos += 1;
+                return Some(event);
             }
         }
-        Some(events)
+        None
     }
 
-    fn handle_meta_event(&mut self, msg: &Meta) {
-        if let Meta::SetTempo(tempo) = msg {
-            self.bpm = 60_000_000. / f64::from(*tempo);
-        }
-    }
-
-    fn current_tick_duration(&self) -> Duration {
-        let Some(midifile) = &self.midifile else {
-            return Duration::ZERO;
-        };
-        let in_secs = match midifile.header.division {
-            Division::TicksPerQuarterNote(ticks) => 60. / self.bpm / f64::from(ticks),
-            Division::TimeCode {
-                frames_per_second,
-                ticks_per_frame,
-            } => {
-                let fps = match frames_per_second {
-                    TimeCodeType::FPS24 => 24.,
-                    TimeCodeType::FPS25 => 25.,
-                    TimeCodeType::DF30 | TimeCodeType::NDF30 => 30.,
-                };
-                1. / fps / f64::from(ticks_per_frame)
-            }
-        };
-        Duration::from_secs_f64(in_secs)
-    }
-
-    fn update_song_length(&mut self) {
-        let Some(midifile) = &self.midifile else {
-            self.song_len = Duration::ZERO;
-            return;
-        };
-
-        let mut track_positions = vec![0; midifile.tracks.len()];
-        let mut tick = 0;
-        let mut duration = Duration::ZERO;
-        let mut bpm = 120.;
-        loop {
-            let mut done = true;
-            for (i, track) in midifile.tracks.iter().enumerate() {
-                loop {
-                    let event_idx = track_positions[i];
-                    if event_idx >= track.len() {
-                        break;
-                    }
-                    done = false;
-
-                    let event = &track.events()[event_idx];
-                    let event_tick = midifile
-                        .header
-                        .division
-                        .beat_or_frame_to_tick(event.beat_or_frame)
-                        as usize;
-                    if tick >= event_tick {
-                        track_positions[i] += 1;
-                        if let MidiMsg::Meta { msg } = &event.event
-                            && let Meta::SetTempo(tempo) = msg
-                        {
-                            bpm = 60_000_000. / f64::from(*tempo);
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-            tick += 1;
-            let tick_duration = match midifile.header.division {
-                Division::TicksPerQuarterNote(ticks) => 60. / bpm / f64::from(ticks),
-                Division::TimeCode {
-                    frames_per_second,
-                    ticks_per_frame,
-                } => {
-                    let fps = match frames_per_second {
-                        TimeCodeType::FPS24 => 24.,
-                        TimeCodeType::FPS25 => 25.,
-                        TimeCodeType::DF30 | TimeCodeType::NDF30 => 30.,
-                    };
-                    1. / fps / f64::from(ticks_per_frame)
-                }
-            };
-            duration += Duration::from_secs_f64(tick_duration);
-            if done {
-                break;
-            }
-        }
-        self.song_len = duration;
-    }
-
-    pub const fn song_length(&self) -> Duration {
-        self.song_len
+    pub const fn song_duration(&self) -> Duration {
+        self.song_duration
     }
 
     pub const fn song_position(&self) -> Duration {
-        self.song_pos
+        self.song_position
     }
 
     pub fn seek_to<R>(&mut self, event_sink: &mut R, pos: Duration)
     where
         R: MidiSink,
     {
-        let Some(midifile) = &self.midifile else {
-            return;
-        };
-
-        if pos < self.song_pos {
-            self.bpm = 120.;
-            self.track_positions = vec![0; midifile.tracks.len()];
-            self.tick = 0;
-            self.song_pos = Duration::ZERO;
+        if pos < self.song_position {
+            self.song_position = Duration::ZERO;
+            for (pos, _) in &mut self.tracks {
+                *pos = 0;
+            }
             event_sink.reset();
         }
 
-        self.since_last_tick = Duration::ZERO;
-
-        while self.song_pos < pos {
-            self.update_events_quiet(event_sink);
+        let delta_t = pos.saturating_sub(self.song_position);
+        if delta_t > Duration::ZERO {
+            self.update_events_quiet(event_sink, delta_t);
         }
     }
+}
+
+fn tick_duration(header: &Header, bpm: f64) -> Duration {
+    let in_secs = match header.division {
+        Division::TicksPerQuarterNote(ticks) => 60.0 / bpm / f64::from(ticks),
+        Division::TimeCode {
+            frames_per_second,
+            ticks_per_frame,
+        } => {
+            let fps = match frames_per_second {
+                TimeCodeType::FPS24 => 24.0,
+                TimeCodeType::FPS25 => 25.0,
+                TimeCodeType::DF30 | TimeCodeType::NDF30 => 30.0,
+            };
+            1.0 / fps / f64::from(ticks_per_frame)
+        }
+    };
+    Duration::from_secs_f64(in_secs)
+}
+
+fn generate_absolute_tracks(midi_file: &MidiFile) -> Vec<Vec<MidiEvent>> {
+    let midi_header = &midi_file.header;
+    let midi_tracks = &midi_file.tracks;
+    let num_tracks = midi_tracks.len();
+
+    let mut track_positions: Vec<usize> = vec![0; num_tracks];
+    let mut track_ticks: Vec<u32> = vec![0; num_tracks];
+    let mut track_times: Vec<Duration> = vec![Duration::ZERO; num_tracks];
+
+    let mut bpm: f64 = 120.0;
+
+    let mut abs_tracks: Vec<Vec<MidiEvent>> = vec![vec![]; num_tracks];
+
+    while let Some(track_index) = {
+        let mut lowest_tick = u32::MAX;
+        let mut next_track = None;
+
+        for (i, pos) in track_positions.iter().enumerate() {
+            let track = midi_tracks[i].events();
+            if *pos >= track.len() {
+                continue;
+            }
+
+            let event = &track[*pos];
+            let event_tick = track_ticks[i] + event.delta_time;
+            if event_tick < lowest_tick {
+                lowest_tick = event_tick;
+                next_track = Some(i);
+            }
+        }
+
+        next_track
+    } {
+        let event_index = track_positions[track_index];
+        let track = midi_tracks[track_index].events();
+        let track_event = &track[event_index];
+
+        track_positions[track_index] += 1;
+        track_ticks[track_index] += track_event.delta_time;
+        track_times[track_index] += tick_duration(midi_header, bpm) * track_event.delta_time;
+
+        abs_tracks[track_index].push(MidiEvent::new(
+            track_times[track_index],
+            track_event.event.clone(),
+        ));
+
+        if let MidiMsg::Meta {
+            msg: Meta::SetTempo(tempo),
+        } = track_event.event
+        {
+            bpm = 60_000_000.0 / f64::from(tempo);
+        }
+    }
+    abs_tracks
 }

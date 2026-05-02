@@ -10,28 +10,25 @@ use rustysynth::Synthesizer;
 use super::midisequencer::MidiSink;
 
 impl MidiSink for Synthesizer {
-    fn receive_midi(&mut self, msg: &MidiMsg) -> Result<(), ()> {
+    fn receive_midi(&mut self, msg: &MidiMsg) {
         let raw = msg.to_midi();
 
-        if let 2..=3 = raw.len() {
-            send_raw_event(self, &raw);
-            return Ok(());
-        }
-
-        if raw.len() == 5 {
-            // Break a message that contains MSB and LSB in one into two
-            // separate ones for rustysynth consumption.
-            if let 0x62 | 0x64 = raw[1] {
-                let msb = vec![raw[0], raw[3], raw[4]];
-                let lsb = &raw[0..3];
-                send_raw_event(self, &msb);
-                send_raw_event(self, lsb);
-                return Ok(());
+        match raw.len() {
+            2..=3 => send_raw_event(self, &raw),
+            5 => {
+                // Break a message that contains MSB and LSB in one into two
+                // separate ones for rustysynth consumption.
+                if let 0x62 | 0x64 = raw[1] {
+                    let msb = vec![raw[0], raw[3], raw[4]];
+                    let lsb = &raw[0..3];
+                    send_raw_event(self, &msb);
+                    send_raw_event(self, lsb);
+                }
             }
+            _ => (),
         }
-
-        Err(())
     }
+
     fn reset(&mut self) {
         self.reset();
     }

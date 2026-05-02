@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+mod midi_region;
 mod midisequencer;
 mod midisource;
 mod midisynth;
@@ -61,9 +62,7 @@ impl CrustySynth {
     pub fn set_midi_file(&mut self, midi_file: Option<Arc<MidiFile>>) {
         self.stop();
         if let Some(midi_file) = midi_file {
-            let mut temp_seq = MidiSequencer::new();
-            temp_seq.play(&midi_file);
-            let duration = temp_seq.song_length();
+            let duration = MidiSequencer::new(&midi_file).song_duration();
             self.midi_file = Some((midi_file, duration))
         } else {
             self.midi_file = None;
@@ -88,9 +87,7 @@ impl CrustySynth {
             }
             self.player = Some(new)
         }
-        let mut temp_seq = MidiSequencer::new();
-        temp_seq.play(&midi_file);
-        let duration = temp_seq.song_length();
+        let duration = MidiSequencer::new(&midi_file).song_duration();
         self.midi_file = Some((midi_file, duration));
     }
 

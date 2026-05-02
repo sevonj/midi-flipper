@@ -44,8 +44,7 @@ impl MidiSource {
         let mut synthesizer =
             Synthesizer::new(sf, &settings).expect("Could not create synthesizer");
         synthesizer.set_master_volume(1.0);
-        let mut sequencer = MidiSequencer::new();
-        sequencer.play(midi_file);
+        let sequencer = MidiSequencer::new(midi_file);
 
         let delta_t = Duration::from_secs_f64(1. / f64::from(synthesizer.get_sample_rate()));
         Self {
@@ -59,7 +58,7 @@ impl MidiSource {
 
     #[allow(dead_code)]
     pub const fn song_length(&self) -> Duration {
-        self.sequencer.song_length()
+        self.sequencer.song_duration()
     }
 
     pub const DEFAULT_SAMPLE_RATE: i32 = 44100;
@@ -108,7 +107,10 @@ impl Iterator for MidiSource {
 
 impl rodio::Source for MidiSource {
     fn current_span_len(&self) -> Option<usize> {
-        let time_left = self.sequencer.song_length() - self.sequencer.song_position();
+        let time_left = self
+            .sequencer
+            .song_duration()
+            .saturating_sub(self.sequencer.song_position());
         let samples_left = time_left.as_secs_f64() * f64::from(self.synthesizer.get_sample_rate());
         Some(samples_left as usize)
     }
@@ -122,7 +124,7 @@ impl rodio::Source for MidiSource {
     }
 
     fn total_duration(&self) -> Option<Duration> {
-        Some(self.sequencer.song_length())
+        Some(self.sequencer.song_duration())
     }
 
     fn try_seek(&mut self, pos: Duration) -> Result<(), rodio::source::SeekError> {
