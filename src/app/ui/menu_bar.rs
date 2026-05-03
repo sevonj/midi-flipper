@@ -61,14 +61,14 @@ impl MidiFlipperApp {
                         ui.with_layout(Layout::left_to_right(egui::Align::Max), |ui| {
                             Tab::value(
                                 ui,
-                                &mut self.tab,
+                                &mut self.state.tab,
                                 AppTab::Tracks,
                                 &AppTab::Tracks.to_string(),
                                 "tab_session",
                             );
                             Tab::value(
                                 ui,
-                                &mut self.tab,
+                                &mut self.state.tab,
                                 AppTab::Log,
                                 &AppTab::Log.to_string(),
                                 "tab_log",
@@ -160,7 +160,7 @@ impl MidiFlipperApp {
             ui.separator();
 
             if ui.button("About").clicked() {
-                self.modal_state.show_about = true;
+                self.state.modal_state.show_about = true;
             }
 
             ui.separator();
@@ -220,7 +220,7 @@ impl MidiFlipperApp {
             ui.label("Soundfont");
             let has_custom_sf = self.custom_soundfont().is_some();
             if ui.radio(!has_custom_sf, "Default").clicked() {
-                self.set_custom_soundfont(None);
+                self.clear_custom_soundfont();
                 self.log_text(String::from("Loaded default soundfont"));
             };
 

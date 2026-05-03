@@ -33,7 +33,7 @@ impl MidiFlipperApp {
             })
             .should_close()
         {
-            self.modal_state.show_about = false;
+            self.state.modal_state.show_about = false;
         };
     }
 
@@ -50,7 +50,7 @@ impl MidiFlipperApp {
             })
             .should_close()
         {
-            self.modal_state.show_about_legal = false;
+            self.state.modal_state.show_about_legal = false;
         };
     }
 
@@ -93,7 +93,7 @@ impl MidiFlipperApp {
             ))
             .clicked()
         {
-            self.modal_state.show_about_legal = true;
+            self.state.modal_state.show_about_legal = true;
         }
     }
 }

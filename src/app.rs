@@ -5,7 +5,6 @@ mod shortcuts;
 mod ui;
 mod widgets;
 
-use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,12 +21,12 @@ use egui_extras::install_image_loaders;
 use egui_toast::Toast;
 use egui_toast::ToastKind;
 use egui_toast::ToastOptions;
-use egui_toast::Toasts;
 use rfd::FileDialog;
 use rustysynth::SoundFont;
 
 use crate::MidiFlipperError;
 use crate::app::data::AppSettings;
+use crate::app::data::AppState;
 use crate::app::data::Session;
 use crate::app::widgets::LogView;
 use crate::app::widgets::Timeline;
@@ -54,32 +53,22 @@ struct ModalState {
     pub show_about_legal: bool,
 }
 
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(default)]
 pub struct MidiFlipperApp {
-    workdir: Option<PathBuf>,
+    #[serde(skip)]
     session: Session,
-    toasts: Toasts,
-    log: VecDeque<String>,
-    tab: AppTab,
-    start: Instant,
-    splash_done: bool,
-    session_init: bool,
-    modal_state: ModalState,
     settings: AppSettings,
+    #[serde(skip)]
+    state: AppState,
 }
 
 impl Default for MidiFlipperApp {
     fn default() -> Self {
         let mut this = Self {
-            workdir: Default::default(),
             session: Session::placeholder(),
-            toasts: Default::default(),
-            log: Default::default(),
-            tab: Default::default(),
-            start: Instant::now(),
-            splash_done: false,
-            session_init: false,
-            modal_state: Default::default(),
             settings: Default::default(),
+            state: Default::default(),
         };
         this.log_text(String::from("Hello there!"));
         this
@@ -88,11 +77,11 @@ impl Default for MidiFlipperApp {
 
 impl MidiFlipperApp {
     pub const fn master_volume(&self) -> f32 {
-        self.settings.master_volume
+        self.state.master_volume
     }
 
     pub fn set_master_volume(&mut self, master_volume: f32) {
-        self.settings.master_volume = master_volume;
+        self.state.master_volume = master_volume;
         self.session.set_playback_volume(master_volume);
     }
 
@@ -100,7 +89,16 @@ impl MidiFlipperApp {
         cc.egui_ctx
             .set_fonts(epaint_ubuntu_fonts::font_definitions());
         cc.egui_ctx.set_theme(eframe::egui::Theme::Dark);
-        Default::default()
+        let mut this: MidiFlipperApp = cc
+            .storage
+            .and_then(|storage| eframe::get_value(storage, eframe::APP_KEY))
+            .unwrap_or_default();
+
+        if let Some(file_path) = this.settings.custom_soundfont_path.take() {
+            this.try_open_soundfont(file_path);
+        }
+
+        this
     }
 
     pub fn prompt_open_midi(&mut self) {
@@ -126,11 +124,11 @@ impl MidiFlipperApp {
 
     pub fn open_midi(&mut self, file_path: PathBuf) -> Result<(), MidiFlipperError> {
         self.log_text(format!("Opening {file_path:?}"));
-        self.workdir = file_path.parent().map(|p| p.to_path_buf());
+        self.settings.workdir = file_path.parent().map(|p| p.to_path_buf());
         let mut session = Session::from_file(file_path)?;
-        session.set_custom_soundfont(self.settings.custom_soundfont.clone());
-        self.session_init = false;
-        session.set_playback_volume(self.settings.master_volume);
+        session.set_custom_soundfont(self.state.custom_soundfont.clone());
+        self.state.session_init = false;
+        session.set_playback_volume(self.state.master_volume);
         self.session = session;
         Ok(())
     }
@@ -144,10 +142,14 @@ impl MidiFlipperApp {
 
     pub fn open_soundfont(&mut self, file_path: PathBuf) -> Result<(), MidiFlipperError> {
         self.log_text(format!("Opening {file_path:?}"));
-        let file = std::fs::File::open(file_path)?;
+        let file = std::fs::File::open(&file_path)?;
         let soundfont = SoundFont::new(&mut std::io::BufReader::new(file))?;
         let sf_name = soundfont.get_info().get_bank_name().to_string();
-        self.set_custom_soundfont(Some(std::sync::Arc::new(soundfont)));
+        self.settings.custom_soundfont_path = Some(file_path);
+        self.state.custom_soundfont = Some(std::sync::Arc::new(soundfont));
+        self.session
+            .set_custom_soundfont(self.custom_soundfont().clone());
+
         self.log_text(format!("Loaded soundfont: {sf_name:?}"));
         Ok(())
     }
@@ -161,12 +163,13 @@ impl MidiFlipperApp {
     }
 
     pub fn custom_soundfont(&self) -> &Option<Arc<SoundFont>> {
-        &self.settings.custom_soundfont
+        &self.state.custom_soundfont
     }
 
-    pub fn set_custom_soundfont(&mut self, custom_soundfont: Option<Arc<SoundFont>>) {
-        self.settings.custom_soundfont = custom_soundfont.clone();
-        self.session.set_custom_soundfont(custom_soundfont);
+    pub fn clear_custom_soundfont(&mut self) {
+        self.settings.custom_soundfont_path = None;
+        self.state.custom_soundfont = None;
+        self.session.set_custom_soundfont(None);
     }
 
     pub fn prompt_save_file(&mut self) {
@@ -208,7 +211,7 @@ impl MidiFlipperApp {
 
     fn pick_midi_file(&self) -> Option<PathBuf> {
         let mut dialog = FileDialog::new().add_filter("MIDI Files", &["mid", "midi"]);
-        if let Some(dir) = &self.workdir {
+        if let Some(dir) = &self.settings.workdir {
             dialog = dialog.set_directory(dir);
         }
         dialog.pick_file()
@@ -216,7 +219,7 @@ impl MidiFlipperApp {
 
     fn pick_soundfont(&self) -> Option<PathBuf> {
         let mut dialog = FileDialog::new().add_filter("Soundfont", &["sf2"]);
-        if let Some(dir) = &self.workdir {
+        if let Some(dir) = &self.settings.workdir {
             dialog = dialog.set_directory(dir);
         }
         dialog.pick_file()
@@ -226,14 +229,14 @@ impl MidiFlipperApp {
         let mut dialog = FileDialog::new()
             .add_filter("MIDI Files", &["mid"])
             .set_file_name(file_name);
-        if let Some(dir) = &self.workdir {
+        if let Some(dir) = &self.settings.workdir {
             dialog = dialog.set_directory(dir);
         }
         dialog.save_file()
     }
 
     fn toast_success(&mut self, text: impl Into<WidgetText>) {
-        self.toasts.add(
+        self.state.toasts.add(
             Toast::new()
                 .text(text)
                 .options(
@@ -246,7 +249,7 @@ impl MidiFlipperApp {
     }
 
     fn toast_err(&mut self, text: impl Into<WidgetText>) {
-        self.toasts.add(
+        self.state.toasts.add(
             Toast::new()
                 .text(text)
                 .options(
@@ -263,10 +266,10 @@ impl MidiFlipperApp {
     }
 
     fn log_text(&mut self, text: String) {
-        while self.log.len() > 99 {
-            self.log.pop_front();
+        while self.state.log.len() > 99 {
+            self.state.log.pop_front();
         }
-        self.log.push_back(text);
+        self.state.log.push_back(text);
     }
 
     fn tab_tracks(&mut self, ui: &mut Ui) {
@@ -274,17 +277,21 @@ impl MidiFlipperApp {
     }
 
     fn tab_log(&mut self, ui: &mut Ui) {
-        ui.add(LogView::new(&self.log));
+        ui.add(LogView::new(&self.state.log));
     }
 }
 
 impl App for MidiFlipperApp {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         // --- Setup
         install_image_loaders(ui.ctx());
 
         // --- Amazin Professoinal Enterprise Quality Splash Screen
-        if Instant::now() - self.start < Duration::from_secs(3) {
+        if Instant::now() - self.state.start < Duration::from_secs(3) {
             const SPLASH_SIZE: Vec2 = Vec2 { x: 400.0, y: 300.0 };
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(false));
             ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(SPLASH_SIZE));
@@ -298,15 +305,15 @@ impl App for MidiFlipperApp {
             });
             return;
         }
-        if !self.splash_done {
+        if !self.state.splash_done {
             ui.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
             ui.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(1200.0, 800.0)));
-            self.splash_done = true;
+            self.state.splash_done = true;
         }
 
-        if !self.session_init {
+        if !self.state.session_init {
             Timeline::reset_zoom_position(ui);
-            self.session_init = true;
+            self.state.session_init = true;
         }
 
         // --- Actual UI
@@ -317,20 +324,20 @@ impl App for MidiFlipperApp {
             self.border(ui);
         }
 
-        match self.tab {
+        match self.state.tab {
             AppTab::Tracks => self.tab_tracks(ui),
             AppTab::Log => self.tab_log(ui),
         }
 
-        if self.modal_state.show_about {
+        if self.state.modal_state.show_about {
             self.about_dialog(ui);
         }
-        if self.modal_state.show_about_legal {
+        if self.state.modal_state.show_about_legal {
             self.about_legal_dialog(ui);
         }
 
         self.consume_shortcuts(ui);
-        self.toasts.show(ui);
+        self.state.toasts.show(ui);
         self.session.check_for_changes();
         if self.session.is_playing() {
             ui.request_repaint();

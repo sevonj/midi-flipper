@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use std::sync::Arc;
+use std::path::PathBuf;
 
-use rustysynth::SoundFont;
-
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(default)]
 pub struct AppSettings {
-    pub custom_soundfont: Option<Arc<SoundFont>>,
-    pub master_volume: f32,
+    pub workdir: Option<PathBuf>,
+    pub custom_soundfont_path: Option<PathBuf>,
     pub border: bool,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            custom_soundfont: None,
-            master_volume: 1.0,
+            workdir: None,
+            custom_soundfont_path: None,
             border: false,
         }
     }

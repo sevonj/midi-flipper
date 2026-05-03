@@ -15,8 +15,9 @@ rodio = "0.22.2"
 rustysynth = "1.3.6"
 
 # Egui/eframe defaults-include GPL-incompatible(?) fonts.
-eframe = { version = "*", default-features = false, features=[
+eframe = { version = "*", default-features = false, features = [
     "accesskit",
+    "persistence",
     "wayland",
     "web_screen_reader",
     "wgpu",
@@ -24,8 +25,9 @@ eframe = { version = "*", default-features = false, features=[
 ] }
 egui = { version = "0.34.1", default-features = false }
 egui-toast = "0.20.0"
-egui_extras =  { version = "0.34.1", features = ["image", "svg"] }
-epaint_ubuntu_fonts = { git = "https://github.com/sevonj/epaint-ubuntu-fonts.git", tag = "v0.1.0"}
+egui_extras = { version = "0.34.1", features = ["image", "svg"] }
+epaint_ubuntu_fonts = { git = "https://github.com/sevonj/epaint-ubuntu-fonts.git", tag = "v0.1.0" }
 image = { version = "0.25.10", features = ["png"] }
 rfd = "0.17.2"
 winit = "0.30.13" # Needed because eframe default-features disable
+serde = { version = "1.0.228", features = ["derive"] }
