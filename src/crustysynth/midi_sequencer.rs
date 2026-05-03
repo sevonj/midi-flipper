@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use midi_msg::ChannelVoiceMsg;
 use midi_msg::Division;
 use midi_msg::Header;
 use midi_msg::Meta;
@@ -45,53 +44,19 @@ impl MidiSequencer {
         self.song_position > self.song_duration
     }
 
-    pub fn update_events<R>(&mut self, event_sink: &mut R, delta_t: Duration)
-    where
-        R: MidiSink,
-    {
+    pub fn advance_time(&mut self, delta_t: Duration) {
         self.song_position += delta_t;
-
-        while let Some(event) = self.next_event() {
-            event_sink.receive_midi(&event.msg);
-        }
     }
 
-    pub fn update_events_quiet<R>(&mut self, event_sink: &mut R, delta_t: Duration)
-    where
-        R: MidiSink,
-    {
-        self.song_position += delta_t;
-
-        while let Some(event) = self.next_event() {
-            fn is_note_on(event: &MidiMsg) -> bool {
-                match event {
-                    MidiMsg::ChannelVoice { msg, .. }
-                    | MidiMsg::RunningChannelVoice { msg, .. } => match msg {
-                        ChannelVoiceMsg::NoteOn { velocity, .. } => *velocity != 0,
-                        ChannelVoiceMsg::HighResNoteOn { velocity, .. } => *velocity != 0,
-                        _ => false,
-                    },
-                    _ => false,
-                }
-            }
-
-            if is_note_on(&event.msg) {
-                continue;
-            }
-
-            event_sink.receive_midi(&event.msg);
-        }
-    }
-
-    fn next_event(&mut self) -> Option<&MidiEvent> {
-        for (track_pos, region) in &mut self.tracks {
+    pub fn take_event(&mut self) -> Option<(usize, &MidiMsg)> {
+        for (i, (track_pos, region)) in self.tracks.iter_mut().enumerate() {
             if *track_pos >= region.events().len() {
                 continue;
             }
             let event = &region.events()[*track_pos];
             if self.song_position >= event.time {
                 *track_pos += 1;
-                return Some(event);
+                return Some((i, &event.msg));
             }
         }
         None
@@ -105,7 +70,7 @@ impl MidiSequencer {
         self.song_position
     }
 
-    pub fn seek_to<R>(&mut self, event_sink: &mut R, pos: Duration)
+    pub fn seek_to<R>(&mut self, event_sinks: &mut [R], pos: Duration)
     where
         R: MidiSink,
     {
@@ -114,12 +79,14 @@ impl MidiSequencer {
             for (pos, _) in &mut self.tracks {
                 *pos = 0;
             }
-            event_sink.reset();
+            for sink in event_sinks {
+                sink.reset();
+            }
         }
 
         let delta_t = pos.saturating_sub(self.song_position);
         if delta_t > Duration::ZERO {
-            self.update_events_quiet(event_sink, delta_t);
+            self.advance_time(delta_t);
         }
     }
 }
