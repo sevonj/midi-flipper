@@ -96,29 +96,21 @@ impl MidiFlipperApp {
                             ui.vertical(|ui| {
                                 ui.add(Label::new("Master Volume").selectable(false));
 
-                                let state_id = ui.id().with("tracks_timeline_state");
-
                                 let mut volume = self.master_volume();
-                                let mut use_big_range = ui
-                                    .data_mut(|d| d.get_temp::<bool>(state_id).unwrap_or_default());
 
                                 ui.horizontal(|ui| {
-                                    let loud_changed = ui
-                                        .checkbox(&mut use_big_range, "Loud")
-                                        .on_hover_text("Increase slider range.")
-                                        .changed();
-                                    let range = if use_big_range { 0.0..=10.0 } else { 0.0..=1.5 };
                                     let rms = self.session.synth().master_vu().rms();
                                     if ui
-                                        .add(VolumeSlider::new(&mut volume).range(range).rms(rms))
+                                        .add(
+                                            VolumeSlider::new(&mut volume)
+                                                .range(0.0..=1.5)
+                                                .rms(rms),
+                                        )
                                         .changed()
-                                        || loud_changed
                                     {
                                         self.set_master_volume(volume);
                                     }
                                 });
-
-                                ui.data_mut(|d| d.insert_temp(state_id, use_big_range));
                             });
                         });
                 });
