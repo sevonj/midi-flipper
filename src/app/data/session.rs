@@ -16,6 +16,7 @@ use rustysynth::SoundFont;
 use crate::MidiFlipperError;
 use crate::app::data::SessionTrack;
 use crate::crustysynth::CrustySynth;
+use crate::crustysynth::MidiRegion;
 
 #[derive(Debug, Clone)]
 pub struct CachedBar {
@@ -28,7 +29,6 @@ pub struct CachedBar {
 
 pub struct Session {
     name: String,
-    length: f32,
     midi_header: midi_msg::Header,
     tracks: Vec<SessionTrack>,
     marker_events: Vec<(f64, Meta)>,
@@ -50,20 +50,16 @@ impl Session {
         let global_transpose = 0;
         let flip_bend = false;
 
+        let regions = MidiRegion::from_midi_file(&midi_file);
         let mut tracks = Vec::with_capacity(midi_file.tracks.len());
-        let mut length = 0.0;
-        for track in midi_file.tracks {
-            let session_track = SessionTrack::from_track(track, global_transpose, flip_bend);
-            if session_track.length() > length {
-                length = session_track.length();
-            }
+        for midi_region in regions {
+            let session_track = SessionTrack::from_track(midi_region, global_transpose, flip_bend);
             tracks.push(session_track);
         }
 
         let mut this = Self {
             name,
             midi_header: midi_file.header,
-            length,
             tracks,
             marker_events: vec![],
             beats_paint_cache: vec![],
@@ -97,7 +93,6 @@ impl Session {
     pub fn placeholder() -> Self {
         Self {
             name: String::from("No File"),
-            length: 0.0,
             midi_header: midi_msg::Header::default(),
             tracks: vec![],
             marker_events: vec![],
@@ -121,8 +116,21 @@ impl Session {
         &self.name
     }
 
-    pub fn length(&self) -> f32 {
-        self.length
+    #[allow(dead_code)]
+    pub fn length(&self) -> Duration {
+        self.tracks
+            .iter()
+            .map(|track| track.length())
+            .max()
+            .unwrap_or(Duration::ZERO)
+    }
+
+    pub fn length_in_ticks(&self) -> u32 {
+        self.tracks
+            .iter()
+            .map(|track| track.length_in_ticks())
+            .max()
+            .unwrap_or(0)
     }
 
     pub fn midi_header(&self) -> &midi_msg::Header {
@@ -182,15 +190,21 @@ impl Session {
     }
 
     fn refresh_synth(&mut self) {
-        let midi_file = if self.playback_original {
-            self.assemble_original_midi()
+        let regions = if self.playback_original {
+            self.tracks
+                .iter()
+                .map(|track| track.track_original().midi_region().clone())
+                .collect()
         } else {
-            self.assemble_flipped_midi()
+            self.tracks
+                .iter()
+                .map(|track| track.track_flipped().midi_region().clone())
+                .collect()
         };
         if self.is_playback_in_progress() {
-            self.synth.swap_midi_file(Arc::new(midi_file));
+            self.synth.swap_midi(Arc::new(regions));
         } else {
-            self.synth.set_midi_file(Some(Arc::new(midi_file)));
+            self.synth.set_midi(Some(Arc::new(regions)));
         }
     }
 
@@ -277,7 +291,7 @@ impl Session {
     }
 
     pub fn play(&mut self) {
-        if self.synth.midi_file().is_none() {
+        if self.synth.midi().is_none() {
             self.refresh_synth();
         }
         let in_progress = self.is_playback_in_progress();
@@ -295,26 +309,13 @@ impl Session {
         self.synth.stop();
     }
 
-    pub fn assemble_original_midi(&self) -> MidiFile {
-        let mut tracks = Vec::with_capacity(self.tracks.len());
-        for track in &self.tracks {
-            let midi_track = track.track_original().midi_track().clone();
-            tracks.push(midi_track);
-        }
-
-        MidiFile {
-            header: self.midi_header.clone(),
-            tracks,
-        }
-    }
-
     pub fn assemble_flipped_midi(&self) -> MidiFile {
         let mut tracks = Vec::with_capacity(self.tracks.len());
         for track in &self.tracks {
             let midi_track = if track.flip_enabled() {
-                track.track_flipped().midi_track().clone()
+                track.track_flipped().midi_region().to_midi_track()
             } else {
-                track.track_original().midi_track().clone()
+                track.track_original().midi_region().to_midi_track()
             };
             tracks.push(midi_track);
         }
@@ -355,23 +356,18 @@ impl Session {
         loop {
             let mut done = true;
             for (i, track) in self.tracks.iter().enumerate() {
-                let track = track.track_original().midi_track();
+                let track = track.track_original().midi_region();
                 loop {
                     let event_idx = track_positions[i];
-                    if event_idx >= track.len() {
+                    if event_idx >= track.events().len() {
                         break;
                     }
                     done = false;
 
-                    let track_event = &track.events()[event_idx];
-                    let event_tick = self
-                        .midi_header
-                        .division
-                        .beat_or_frame_to_tick(track_event.beat_or_frame)
-                        as usize;
-                    if current_tick >= event_tick {
+                    let event = &track.events()[event_idx];
+                    if current_tick >= event.tick as usize {
                         track_positions[i] += 1;
-                        if let midi_msg::MidiMsg::Meta { msg } = &track_event.event {
+                        if let midi_msg::MidiMsg::Meta { msg } = &event.msg {
                             match msg {
                                 Meta::TimeSignature(ts) => {
                                     time_signature = ts.clone();

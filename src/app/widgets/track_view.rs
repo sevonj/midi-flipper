@@ -97,9 +97,7 @@ fn toggle_button(ui: &mut egui::Ui, selected: bool, label: &str, tooltip: &str) 
 }
 
 fn track_name(track: &mut SessionTrack) -> RichText {
-    if !track.is_midi() {
-        RichText::new("[unknown track type]").weak()
-    } else if let Some(name) = track.name() {
+    if let Some(name) = track.name() {
         if name.is_empty() {
             RichText::new("[track name is empty]").weak()
         } else {

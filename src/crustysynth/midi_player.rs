@@ -5,15 +5,15 @@ use std::time::Duration;
 
 use midi_msg::Channel;
 use midi_msg::ChannelVoiceMsg;
-use midi_msg::MidiFile;
 use midi_msg::MidiMsg;
 use rustysynth::SoundFont;
 use rustysynth::Synthesizer;
 use rustysynth::SynthesizerSettings;
 
-use crate::crustysynth::midi_sink::MidiSink;
+use crate::crustysynth::MidiRegion;
 
 use super::midi_sequencer::MidiSequencer;
+use super::midi_sink::MidiSink;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AudioChannel {
@@ -33,10 +33,10 @@ impl MidiPlayer {
     pub const SAMPLE_RATE: i32 = 44100;
     pub const GAIN: f32 = 0.25;
 
-    pub fn new(sf: &Arc<SoundFont>, midi_file: &Arc<MidiFile>) -> Self {
+    pub fn new(sf: &Arc<SoundFont>, midi: &Arc<Vec<MidiRegion>>) -> Self {
         let settings = SynthesizerSettings::new(Self::SAMPLE_RATE);
 
-        let num_tracks = midi_file.tracks.len();
+        let num_tracks = midi.len();
         let synths = (0..num_tracks)
             .map(|_| {
                 let mut synth =
@@ -46,7 +46,7 @@ impl MidiPlayer {
             })
             .collect();
 
-        let sequencer = MidiSequencer::new(midi_file);
+        let sequencer = MidiSequencer::new(midi);
 
         let sample_duration = Duration::from_secs_f64(1. / f64::from(Self::SAMPLE_RATE));
         Self {

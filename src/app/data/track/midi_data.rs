@@ -1,23 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use std::time::Duration;
+
 use midi_msg::ChannelVoiceMsg;
 use midi_msg::Meta;
 use midi_msg::MidiMsg;
-use midi_msg::Track as MidiTrack;
 
 use crate::app::data::FlipSettings;
 use crate::app::data::PaintableNote;
+use crate::crustysynth::MidiRegion;
 
 #[derive(Debug, Clone)]
 pub struct TrackMidiData {
-    midi_track: MidiTrack,
+    midi_region: MidiRegion,
     paint_cache: Vec<PaintableNote>,
 }
 
 impl TrackMidiData {
-    pub fn new(midi_track: MidiTrack) -> Self {
+    pub fn new(midi_region: MidiRegion) -> Self {
         let mut this = Self {
-            midi_track,
+            midi_region,
             paint_cache: vec![],
         };
         this.regenerate_paint_cache();
@@ -29,45 +31,45 @@ impl TrackMidiData {
         self
     }
 
-    pub(crate) fn midi_track(&self) -> &MidiTrack {
-        &self.midi_track
+    pub fn duration(&self) -> Duration {
+        self.midi_region
+            .events()
+            .last()
+            .map(|event| event.time)
+            .unwrap_or(Duration::ZERO)
+    }
+
+    pub fn length_in_ticks(&self) -> u32 {
+        self.midi_region
+            .events()
+            .last()
+            .map(|event| event.tick)
+            .unwrap_or(0)
+    }
+
+    pub(crate) fn midi_region(&self) -> &MidiRegion {
+        &self.midi_region
     }
 
     pub fn paint_cache(&self) -> &[PaintableNote] {
         &self.paint_cache
     }
 
-    pub(crate) fn is_midi(&self) -> bool {
-        matches!(self.midi_track, MidiTrack::Midi(_))
-    }
-
-    pub fn find_meta(&self) -> (Option<String>, f32) {
-        let MidiTrack::Midi(events) = &self.midi_track else {
-            return (None, 0.0);
-        };
-
-        let mut time = 0.0;
-        let mut found_name = None;
-
-        for track_event in events {
-            time += track_event.delta_time as f32;
-            let MidiMsg::Meta { msg } = &track_event.event else {
+    pub fn find_name(&self) -> Option<String> {
+        for event in self.midi_region.events() {
+            let MidiMsg::Meta { msg } = &event.msg else {
                 continue;
             };
             if let Meta::TrackName(name) = msg {
-                found_name = Some(name.to_string());
+                return Some(name.to_string());
             }
         }
-        (found_name, time)
+        None
     }
 
     pub fn flip(&mut self, settings: &FlipSettings) {
-        let MidiTrack::Midi(track_events) = &mut self.midi_track else {
-            return;
-        };
-
-        for track_event in track_events {
-            let (channel, msg) = match &mut track_event.event {
+        for event in self.midi_region.events_mut() {
+            let (channel, msg) = match &mut event.msg {
                 midi_msg::MidiMsg::ChannelVoice { channel, msg, .. } => (channel, msg),
                 midi_msg::MidiMsg::RunningChannelVoice { channel, msg } => (channel, msg),
                 _ => continue,
@@ -110,17 +112,10 @@ impl TrackMidiData {
     fn regenerate_paint_cache(&mut self) {
         self.paint_cache.clear();
 
-        let MidiTrack::Midi(track_events) = &self.midi_track else {
-            return;
-        };
-
         let mut open_notes = [None::<f32>; 128];
-        let mut time = 0.0;
 
-        for event in track_events {
-            time += event.delta_time as f32;
-
-            let msg = match event.event {
+        for event in self.midi_region.events() {
+            let msg = match event.msg {
                 MidiMsg::ChannelVoice { msg, .. } => msg,
                 MidiMsg::RunningChannelVoice { msg, .. } => msg,
                 _ => continue,
@@ -139,6 +134,7 @@ impl TrackMidiData {
                 continue;
             }
 
+            let time = event.tick as f32;
             if note_on {
                 if open_notes[note as usize].is_none() {
                     open_notes[note as usize] = Some(time);
@@ -153,10 +149,11 @@ impl TrackMidiData {
         }
 
         // Check for unclosed notes
+        let end = self.length_in_ticks() as f32;
         for (note, start) in open_notes.into_iter().enumerate() {
             if let Some(start) = start {
                 self.paint_cache
-                    .push(PaintableNote::new(note as u8, start, time));
+                    .push(PaintableNote::new(note as u8, start, end));
             }
         }
     }

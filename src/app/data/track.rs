@@ -2,15 +2,15 @@
 
 pub(super) mod midi_data;
 
-use midi_msg::Track as MidiTrack;
+use std::time::Duration;
 
 use crate::app::data::FlipSettings;
+use crate::crustysynth::MidiRegion;
 use midi_data::TrackMidiData;
 
 #[derive(Debug)]
 pub struct SessionTrack {
     name: Option<String>,
-    length: f32,
 
     track_original: TrackMidiData,
     track_flipped: TrackMidiData,
@@ -22,20 +22,19 @@ pub struct SessionTrack {
 
 impl SessionTrack {
     pub fn from_track(
-        midi_track: MidiTrack,
+        midi_region: MidiRegion,
         global_transpose: i32,
         global_flip_bend: bool,
     ) -> Self {
         let settings = FlipSettings::new(global_transpose, global_flip_bend);
-        let track_original = TrackMidiData::new(midi_track);
+        let track_original = TrackMidiData::new(midi_region);
 
-        let (name, length) = track_original.find_meta();
+        let name = track_original.find_name();
 
         let track_flipped = track_original.clone().flipped(&settings);
 
         Self {
             name,
-            length,
             track_original,
             track_flipped,
             settings,
@@ -53,8 +52,12 @@ impl SessionTrack {
         self.name.as_deref()
     }
 
-    pub fn length(&self) -> f32 {
-        self.length
+    pub fn length(&self) -> Duration {
+        self.track_original().duration()
+    }
+
+    pub fn length_in_ticks(&self) -> u32 {
+        self.track_original().length_in_ticks()
     }
 
     pub fn track_original(&self) -> &TrackMidiData {
@@ -100,10 +103,6 @@ impl SessionTrack {
     pub fn set_ignore_ch10(&mut self, ignore_ch10: bool) {
         self.settings.ignore_ch10 = ignore_ch10;
         self.reflip();
-    }
-
-    pub fn is_midi(&self) -> bool {
-        self.track_original.is_midi()
     }
 
     fn reflip(&mut self) {

@@ -5,7 +5,6 @@ mod midi_region;
 mod midi_sequencer;
 mod midi_sink;
 
-use midi_msg::MidiFile;
 #[cfg(not(feature = "ci"))]
 use rodio::MixerDeviceSink;
 use rodio::Player;
@@ -16,13 +15,13 @@ use std::time::Duration;
 
 #[cfg(not(feature = "ci"))]
 use midi_player::MidiPlayer;
-use midi_sequencer::MidiSequencer;
+pub use midi_region::MidiRegion;
 
 const DEFAULT_SOUNDFONT: &[u8] = include_bytes!("../assets/__Florestan_Basic_GM_GS.sf2");
 
 pub struct CrustySynth {
     soundfont: Arc<SoundFont>,
-    midi_file: Option<(Arc<MidiFile>, Duration)>,
+    midi: Option<Arc<Vec<MidiRegion>>>,
     #[cfg(not(feature = "ci"))]
     sink_handle: MixerDeviceSink,
     player: Option<Player>,
@@ -37,7 +36,7 @@ impl Default for CrustySynth {
 
         Self {
             soundfont: Self::default_soundfont(),
-            midi_file: None,
+            midi: None,
             #[cfg(not(feature = "ci"))]
             sink_handle,
             player: None,
@@ -51,32 +50,24 @@ impl CrustySynth {
         Arc::new(SoundFont::new(&mut BufReader::new(DEFAULT_SOUNDFONT)).unwrap())
     }
 
-    pub fn midi_file(&self) -> Option<&Arc<MidiFile>> {
-        if let Some((midi_file, _)) = &self.midi_file {
-            return Some(midi_file);
-        }
-        None
+    pub fn midi(&self) -> Option<&Arc<Vec<MidiRegion>>> {
+        self.midi.as_ref()
     }
 
-    pub fn set_midi_file(&mut self, midi_file: Option<Arc<MidiFile>>) {
+    pub fn set_midi(&mut self, midi: Option<Arc<Vec<MidiRegion>>>) {
         self.stop();
-        if let Some(midi_file) = midi_file {
-            let duration = MidiSequencer::new(&midi_file).song_duration();
-            self.midi_file = Some((midi_file, duration))
-        } else {
-            self.midi_file = None;
-        }
+        self.midi = midi;
     }
 
     // Swap on the fly, attempt to keep playback state
-    pub fn swap_midi_file(&mut self, midi_file: Arc<MidiFile>) {
+    pub fn swap_midi(&mut self, midi: Arc<Vec<MidiRegion>>) {
         #[cfg(not(feature = "ci"))]
         if let Some(old) = self.player.take() {
             let paused = old.is_paused();
             let pos = old.get_pos();
 
             let new = Player::connect_new(self.sink_handle.mixer());
-            let source = MidiPlayer::new(&self.soundfont, &midi_file);
+            let source = MidiPlayer::new(&self.soundfont, &midi);
             new.append(source);
             let _ = new.try_seek(pos);
 
@@ -86,8 +77,7 @@ impl CrustySynth {
             }
             self.player = Some(new)
         }
-        let duration = MidiSequencer::new(&midi_file).song_duration();
-        self.midi_file = Some((midi_file, duration));
+        self.midi = Some(midi);
     }
 
     #[allow(dead_code)]
@@ -130,23 +120,23 @@ impl CrustySynth {
     }
 
     pub fn duration(&self) -> Duration {
-        if let Some((_, duration)) = &self.midi_file {
-            return *duration;
-        }
-        Duration::ZERO
+        self.midi
+            .as_ref()
+            .and_then(|tracks| tracks.iter().map(|region| region.duration()).max())
+            .unwrap_or(Duration::ZERO)
     }
 
     pub fn start(&mut self) {
         #[cfg(not(feature = "ci"))]
         {
             self.stop();
-            let Some(midi_file) = self.midi_file() else {
+            let Some(midi) = self.midi() else {
                 return;
             };
 
             let player = Player::connect_new(self.sink_handle.mixer());
             player.set_volume(self.volume);
-            let source = MidiPlayer::new(&self.soundfont, midi_file);
+            let source = MidiPlayer::new(&self.soundfont, midi);
             player.append(source);
             player.play();
             self.player = Some(player)

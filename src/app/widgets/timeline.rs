@@ -144,7 +144,7 @@ impl Timeline<'_> {
 
 impl Widget for Timeline<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        let length = self.session.length();
+        let length = self.session.length_in_ticks() as f32;
 
         let state_id = Self::state_id(ui);
         let mut state = ui.data_mut(|d| d.get_temp::<TimelineState>(state_id).unwrap_or_default());
