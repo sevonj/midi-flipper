@@ -208,6 +208,10 @@ impl Session {
         }
     }
 
+    pub fn synth(&self) -> &CrustySynth {
+        &self.synth
+    }
+
     pub fn playback_original(&self) -> bool {
         self.playback_original
     }

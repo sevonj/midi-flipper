@@ -10,6 +10,7 @@ mod timeline;
 mod track_preview;
 mod track_view;
 mod transposition_control;
+mod volume_slider;
 
 pub use action_row::ActionRow;
 pub use global_controls::GlobalControls;
@@ -21,3 +22,4 @@ pub use timeline::Timeline;
 pub use track_preview::TrackPreview;
 pub use track_view::TrackView;
 pub use transposition_control::TranspositionControl;
+pub use volume_slider::VolumeSlider;

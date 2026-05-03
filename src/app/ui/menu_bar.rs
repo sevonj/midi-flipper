@@ -9,7 +9,6 @@ use egui::Label;
 use egui::Layout;
 use egui::Panel;
 use egui::ScrollArea;
-use egui::Slider;
 use egui::Ui;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::vec2;
@@ -25,6 +24,7 @@ use crate::app::shortcuts::SHORTCUT_QUIT;
 use crate::app::widgets::GlobalControls;
 use crate::app::widgets::PlaybackControls;
 use crate::app::widgets::Tab;
+use crate::app::widgets::VolumeSlider;
 
 const PANEL_HEIGHT: f32 = 48.0;
 const PANEL_CORNER_RADIUS: f32 = 1.0;
@@ -108,7 +108,10 @@ impl MidiFlipperApp {
                                         .on_hover_text("Increase slider range.")
                                         .changed();
                                     let range = if use_big_range { 0.0..=10.0 } else { 0.0..=1.5 };
-                                    if ui.add(Slider::new(&mut volume, range)).changed()
+                                    let rms = self.session.synth().master_vu().rms();
+                                    if ui
+                                        .add(VolumeSlider::new(&mut volume).range(range).rms(rms))
+                                        .changed()
                                         || loud_changed
                                     {
                                         self.set_master_volume(volume);

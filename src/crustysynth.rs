@@ -4,6 +4,7 @@ mod midi_player;
 mod midi_region;
 mod midi_sequencer;
 mod midi_sink;
+mod vu_meter;
 
 #[cfg(not(feature = "ci"))]
 use rodio::MixerDeviceSink;
@@ -17,6 +18,8 @@ use std::time::Duration;
 use midi_player::MidiPlayer;
 pub use midi_region::MidiRegion;
 
+use crate::crustysynth::vu_meter::StereoVUReceiver;
+
 const DEFAULT_SOUNDFONT: &[u8] = include_bytes!("../assets/__Florestan_Basic_GM_GS.sf2");
 
 pub struct CrustySynth {
@@ -26,6 +29,7 @@ pub struct CrustySynth {
     sink_handle: MixerDeviceSink,
     player: Option<Player>,
     volume: f32,
+    master_vu: StereoVUReceiver,
 }
 
 impl Default for CrustySynth {
@@ -41,6 +45,7 @@ impl Default for CrustySynth {
             sink_handle,
             player: None,
             volume: 1.0,
+            master_vu: StereoVUReceiver::dummy(),
         }
     }
 }
@@ -68,6 +73,7 @@ impl CrustySynth {
 
             let new = Player::connect_new(self.sink_handle.mixer());
             let source = MidiPlayer::new(&self.soundfont, &midi);
+            self.master_vu = source.master_vu_receiver();
             new.append(source);
             let _ = new.try_seek(pos);
 
@@ -100,6 +106,10 @@ impl CrustySynth {
         if let Some(player) = &self.player {
             player.set_volume(volume);
         };
+    }
+
+    pub fn master_vu(&self) -> &StereoVUReceiver {
+        &self.master_vu
     }
 
     pub fn is_playing(&self) -> bool {
@@ -137,6 +147,7 @@ impl CrustySynth {
             let player = Player::connect_new(self.sink_handle.mixer());
             player.set_volume(self.volume);
             let source = MidiPlayer::new(&self.soundfont, midi);
+            self.master_vu = source.master_vu_receiver();
             player.append(source);
             player.play();
             self.player = Some(player)

@@ -11,6 +11,8 @@ use rustysynth::Synthesizer;
 use rustysynth::SynthesizerSettings;
 
 use crate::crustysynth::MidiRegion;
+use crate::crustysynth::vu_meter::StereoVUReceiver;
+use crate::crustysynth::vu_meter::StereoVUSender;
 
 use super::midi_sequencer::MidiSequencer;
 use super::midi_sink::MidiSink;
@@ -27,6 +29,7 @@ pub struct MidiPlayer {
     sample_duration: Duration,
     cached_sample: f32,
     next_ch: AudioChannel,
+    master_vu: StereoVUSender,
 }
 
 impl MidiPlayer {
@@ -55,12 +58,17 @@ impl MidiPlayer {
             sequencer,
             next_ch: AudioChannel::L,
             cached_sample: 0.,
+            master_vu: Default::default(),
         }
     }
 
     #[allow(dead_code)]
     pub const fn song_length(&self) -> Duration {
         self.sequencer.song_duration()
+    }
+
+    pub fn master_vu_receiver(&self) -> StereoVUReceiver {
+        self.master_vu.receiver()
     }
 
     fn handle_events(&mut self) {
@@ -126,7 +134,7 @@ impl Iterator for MidiPlayer {
         // The synth generates both channels simultaneously,
         // but Rodio polls samples one at a time, expecting interleaved channels
 
-        match self.next_ch {
+        let sample = match self.next_ch {
             AudioChannel::L => {
                 self.next_ch = AudioChannel::R;
 
@@ -142,14 +150,17 @@ impl Iterator for MidiPlayer {
                     left += lbuf[0];
                     right += rbuf[0];
                 }
-                self.cached_sample = right * Self::GAIN;
-                Some(left * Self::GAIN)
+                self.master_vu.add_sample(left, right);
+                self.cached_sample = right;
+                left
             }
             AudioChannel::R => {
                 self.next_ch = AudioChannel::L;
-                Some(self.cached_sample)
+                self.cached_sample
             }
-        }
+        };
+
+        Some(sample * Self::GAIN)
     }
 }
 
