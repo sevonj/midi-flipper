@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+mod midi_player;
 mod midi_region;
-mod midisequencer;
-mod midisource;
-mod midisynth;
+mod midi_sequencer;
+mod midi_sink;
 
 use midi_msg::MidiFile;
 #[cfg(not(feature = "ci"))]
@@ -15,9 +15,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 #[cfg(not(feature = "ci"))]
-pub use midisource::MidiSource;
-
-use crate::crustysynth::midisequencer::MidiSequencer;
+use midi_player::MidiPlayer;
+use midi_sequencer::MidiSequencer;
 
 const DEFAULT_SOUNDFONT: &[u8] = include_bytes!("../assets/__Florestan_Basic_GM_GS.sf2");
 
@@ -77,7 +76,7 @@ impl CrustySynth {
             let pos = old.get_pos();
 
             let new = Player::connect_new(self.sink_handle.mixer());
-            let source = MidiSource::new(&self.soundfont, &midi_file);
+            let source = MidiPlayer::new(&self.soundfont, &midi_file);
             new.append(source);
             let _ = new.try_seek(pos);
 
@@ -147,7 +146,7 @@ impl CrustySynth {
 
             let player = Player::connect_new(self.sink_handle.mixer());
             player.set_volume(self.volume);
-            let source = MidiSource::new(&self.soundfont, midi_file);
+            let source = MidiPlayer::new(&self.soundfont, midi_file);
             player.append(source);
             player.play();
             self.player = Some(player)

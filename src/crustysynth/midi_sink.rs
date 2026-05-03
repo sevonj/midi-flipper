@@ -1,28 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! `RustySynth` integration: This makes [`rustysynth::Synthesizer`] compatible
-//! with `MidiSequencer` and `midi_msg` crate's event format.
-//!
-
 use midi_msg::MidiMsg;
 use rustysynth::Synthesizer;
 
-use super::midisequencer::MidiSink;
+pub trait MidiSink {
+    fn receive_midi(&mut self, msg: &MidiMsg);
+    fn reset(&mut self);
+}
 
 impl MidiSink for Synthesizer {
     fn receive_midi(&mut self, msg: &MidiMsg) {
         let raw = msg.to_midi();
-
         match raw.len() {
             2..=3 => send_raw_event(self, &raw),
             5 => {
                 // Break a message that contains MSB and LSB in one into two
                 // separate ones for rustysynth consumption.
                 if let 0x62 | 0x64 = raw[1] {
-                    let msb = vec![raw[0], raw[3], raw[4]];
-                    let lsb = &raw[0..3];
-                    send_raw_event(self, &msb);
-                    send_raw_event(self, lsb);
+                    send_raw_event(self, &[raw[0], raw[3], raw[4]]);
+                    send_raw_event(self, &raw[0..3]);
                 }
             }
             _ => (),
@@ -48,7 +44,7 @@ fn send_raw_event(synth: &mut Synthesizer, raw: &[u8]) {
             data1 = raw[1];
             data2 = raw[2];
         }
-        _ => panic!("This shouldn't happen. Check length before calling."),
+        _ => unreachable!(),
     }
     synth.process_midi_message(channel.into(), command.into(), data1.into(), data2.into());
 }

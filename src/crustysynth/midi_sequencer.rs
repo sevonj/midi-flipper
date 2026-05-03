@@ -11,11 +11,7 @@ use std::time::Duration;
 
 use crate::crustysynth::midi_region::MidiEvent;
 use crate::crustysynth::midi_region::MidiRegion;
-
-pub trait MidiSink {
-    fn receive_midi(&mut self, msg: &MidiMsg);
-    fn reset(&mut self);
-}
+use crate::crustysynth::midi_sink::MidiSink;
 
 pub type SeqTrackInfo = (usize, MidiRegion);
 
@@ -24,11 +20,12 @@ pub struct MidiSequencer {
     song_duration: Duration,
     song_position: Duration,
 }
+
 impl MidiSequencer {
     pub fn new(midi_file: &MidiFile) -> Self {
-        let tracks: Vec<SeqTrackInfo> = generate_absolute_tracks(midi_file)
-            .iter()
-            .map(|events| (0, MidiRegion::new(events.clone())))
+        let tracks: Vec<SeqTrackInfo> = generate_midi_regions(midi_file)
+            .into_iter()
+            .map(|region| (0, region))
             .collect();
 
         let song_duration = tracks
@@ -145,7 +142,7 @@ fn tick_duration(header: &Header, bpm: f64) -> Duration {
     Duration::from_secs_f64(in_secs)
 }
 
-fn generate_absolute_tracks(midi_file: &MidiFile) -> Vec<Vec<MidiEvent>> {
+fn generate_midi_regions(midi_file: &MidiFile) -> Vec<MidiRegion> {
     let midi_header = &midi_file.header;
     let midi_tracks = &midi_file.tracks;
     let num_tracks = midi_tracks.len();
@@ -157,7 +154,6 @@ fn generate_absolute_tracks(midi_file: &MidiFile) -> Vec<Vec<MidiEvent>> {
     let mut bpm: f64 = 120.0;
 
     let mut abs_tracks: Vec<Vec<MidiEvent>> = vec![vec![]; num_tracks];
-
     while let Some(track_index) = {
         let mut lowest_tick = u32::MAX;
         let mut next_track = None;
@@ -198,5 +194,10 @@ fn generate_absolute_tracks(midi_file: &MidiFile) -> Vec<Vec<MidiEvent>> {
             bpm = 60_000_000.0 / f64::from(tempo);
         }
     }
-    abs_tracks
+
+    let mut regions = Vec::with_capacity(abs_tracks.len());
+    for events in abs_tracks {
+        regions.push(MidiRegion::new(events));
+    }
+    regions
 }
